@@ -1,0 +1,3 @@
+[submodule "AutopilotDevelopment"]
+	path = AutopilotDevelopment
+	url = git@github.com:SchulichUAV/AutopilotDevelopment.git
