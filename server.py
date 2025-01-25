@@ -2,7 +2,7 @@
 # Built for Raspberry Pi 5 (Linux OS)
 
 from picamera2 import Picamera2, Preview
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 from math import ceil
 import requests
@@ -25,7 +25,8 @@ picam2 = None
 vehicle_connection = None
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins" : "*"}}) # Overriding CORS for external access
+# Overriding CORS for external access
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Dictionary to maintain vehicle state
 vehicle_data = {
@@ -42,6 +43,12 @@ vehicle_data = {
     "dalt": 0,
     "heading": 0
 }
+
+
+@app.route("/heartbeat-validate")
+def stream():
+    return receive_vehicle_position()
+
 
 def receive_vehicle_position():  # Actively runs and receives live vehicle data on a separate thread
     '''
@@ -73,6 +80,12 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
         vehicle_data["dalt"] = float(items[10])
         vehicle_data["heading"] = float(items[11])
 
+        print(vehicle_data)
+        return {
+            "vehicle_state": vehicle_data,
+        }
+
+
 if __name__ == "__main__":
 
     # Initialize vehicle port and GCS url global variables
@@ -80,8 +93,9 @@ if __name__ == "__main__":
         data = json.load(ips)
         VEHICLE_PORT = data["vehicle_port"]
         GCS_URL = data["gcs_url"]
-    
-    position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
+
+    position_thread = threading.Thread(
+        target=receive_vehicle_position, daemon=True)
     position_thread.start()
     time.sleep(1)
 
