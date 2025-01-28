@@ -46,8 +46,9 @@ vehicle_data = {
 
 
 @app.route("/heartbeat-validate")
-def stream():
-    return receive_vehicle_position()
+def heartbeat_validate():
+    # this is being updated by the thread
+    return vehicle_data
 
 
 def receive_vehicle_position():  # Actively runs and receives live vehicle data on a separate thread
