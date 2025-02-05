@@ -16,15 +16,19 @@ from os import path
 import argparse
 import RPi.GPIO as GPIO
 
-import modules.AutopilotDevelopment.General.initialize as initialize
+import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 
 GCS_URL = "http://192.168.1.65:80"
 VEHICLE_PORT = "udp:127.0.0.1:5006"
 ALTITUDE = 25
 UDP_PORT = 5005
+DELAY = 0.25
 
 picam2 = None
 vehicle_connection = None
+image_number = 0
+is_camera_on = False
+image_number = 0
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins" : "*"}}) # Overriding CORS for external access
@@ -44,6 +48,67 @@ vehicle_data = {
     "dalt": 0,
     "heading": 0
 }
+
+@app.route("/toggle_camera", methods=["POST"])
+def toggle_camera():
+    global picam2
+    global image_number
+    
+    data = request.json
+    try:
+        is_camera_on = bool(data["is_camera_on"])
+    except Exception as e:
+        print("Could not interpret `is_camera_on` value from API request.")
+
+    if picam2 is None:
+        picam2 = Picamera2()
+        camera_config = picam2.create_still_configuration()
+        picam2.configure(camera_config)
+        picam2.start_preview(Preview.NULL)
+        picam2.start()
+        time.sleep(1)
+    else:
+        picam2.start()
+
+    while is_camera_on:
+        image_number += 1
+        delay_time_remaining = DELAY - take_picture(image_number, picam2)
+        if delay_time_remaining > 0:
+            time.sleep(delay_time_remaining)
+    
+    picam2.stop()
+
+    return { "message": "Success!"}, 200
+
+def take_picture(image_number, picam2):
+    print(f"Beginning capturing capture{image_number}.jpg")
+    start_time = time.time()
+
+    # Capture image into a temporary BytesIO object
+    image_stream = BytesIO()
+    image = picam2.capture_image('main')
+    image.save(image_stream, format='JPEG')
+    image_stream.seek(0)
+
+    # Serialize vehicle data into a JSON string
+    vehicle_data_json = json.dumps(vehicle_data)
+
+    # Send image to GCS
+    headers = {} # API Request headers
+
+    files = {
+        'file': (f'capture{image_number}.jpg', image_stream, 'image/jpg'),
+    }
+    response = requests.request("POST", f"{GCS_URL}/submit", headers=headers, files=files)
+
+    # Send JSON to GCS (note that these need to be sent in a separate API request due to body datatype)
+    json_stream = BytesIO(vehicle_data_json.encode('utf-8'))
+    json_files = {
+        'file': (f'capture{image_number}.json', json_stream, 'application/json'),
+    }
+    response = requests.request("POST", f"{GCS_URL}/submit", headers=headers, files=json_files)
+    
+    return time.time() - start_time
 
 def receive_vehicle_position():  # Actively runs and receives live vehicle data on a separate thread
     '''
