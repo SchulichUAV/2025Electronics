@@ -17,6 +17,7 @@ import argparse
 import RPi.GPIO as GPIO
 
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
+import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
 
 GCS_URL = "http://192.168.1.65:80"
 VEHICLE_PORT = "udp:127.0.0.1:5006"
@@ -48,6 +49,19 @@ vehicle_data = {
     "dalt": 0,
     "heading": 0
 }
+
+@app.route('/set_flight_mode', methods=["POST"])
+def set_flight_mode():
+# Ardupilot docs (for flight modes): https://ardupilot.org/copter/docs/parameters.html
+    data = request.json
+    try:
+        mode_id = int(data['mode_id'])
+        print(mode_id)
+        print(autopilot_mode.set_mode(vehicle_connection, mode_id))
+    except Exception as e:
+        return jsonify({'error': "Invalid operation."}), 400
+
+    return jsonify({'message': 'Mode set successfully'}), 200
 
 @app.route("/toggle_camera", methods=["POST"])
 def toggle_camera():
