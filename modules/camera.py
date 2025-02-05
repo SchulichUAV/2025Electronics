@@ -6,7 +6,7 @@ import json
 import requests
 
 picam2 = None
-DELAY = 1
+DELAY = 0.25
 
 def trigger_camera(amount_of_pictures, vehicle_data, gcs_url):
     global picam2

@@ -16,8 +16,10 @@ from os import path
 import argparse
 import RPi.GPIO as GPIO
 
-GCS_URL = None
-VEHICLE_PORT = None
+import modules.AutopilotDevelopment.General.initialize as initialize
+
+GCS_URL = "http://192.168.1.65:80"
+VEHICLE_PORT = "udp:127.0.0.1:5006"
 ALTITUDE = 25
 UDP_PORT = 5005
 
@@ -45,7 +47,7 @@ vehicle_data = {
 
 def receive_vehicle_position():  # Actively runs and receives live vehicle data on a separate thread
     '''
-    This function is ran on a separate thread to actively retrieve and update the vehicle state. This vehicle state contains GPS and vehicle orientation.
+    This function is ran on a second thread to actively retrieve and update the vehicle state. This vehicle state contains GPS and vehicle orientation.
     These are pulled at the time of taking an image in order to geotag images and support target localization.
     '''
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -74,25 +76,18 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
         vehicle_data["heading"] = float(items[11])
 
 if __name__ == "__main__":
-
-    # Initialize vehicle port and GCS url global variables
-    with open('ip.json', 'r') as ips:
-        data = json.load(ips)
-        VEHICLE_PORT = data["vehicle_port"]
-        GCS_URL = data["gcs_url"]
-    
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
     position_thread.start()
     time.sleep(1)
 
-    # print(f"Attempting to connect to port: {VEHICLE_PORT}")
-    # vehicle_connection = initialize.connect_to_vehicle(VEHICLE_PORT)
-    # print("Vehicle connection established.")
-    # retVal = initialize.verify_connection(vehicle_connection)
-    # print("Vehicle connection verified.")
+    print(f"Attempting to connect to port: {VEHICLE_PORT}")
+    vehicle_connection = initialize.connect_to_vehicle(VEHICLE_PORT)
+    print("Vehicle connection established.")
+    retVal = initialize.verify_connection(vehicle_connection)
+    print("Vehicle connection verified.")
 
-    # if not retVal:
-    #     print("Error. Could not connect and/or verify a valid connection to the vehicle.")
-    #     sys.exit(1)
+    if not retVal:
+        print("Error. Could not connect and/or verify a valid connection to the vehicle.")
+        sys.exit(1)
 
     app.run(debug=True, host='0.0.0.0')
