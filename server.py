@@ -2,7 +2,7 @@
 # Built for Raspberry Pi 5 (Linux OS)
 
 from picamera2 import Picamera2, Preview
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 from math import ceil
 import requests
@@ -33,7 +33,8 @@ is_camera_on = False
 image_number = 0
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins" : "*"}}) # Overriding CORS for external access
+# Overriding CORS for external access
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Dictionary to maintain vehicle state
 vehicle_data = {
@@ -127,6 +128,13 @@ def take_picture(image_number, picam2):
     
     return time.time() - start_time
 
+
+@app.route("/heartbeat-validate")
+def heartbeat_validate():
+    # this is being updated by the thread
+    return vehicle_data
+
+
 def receive_vehicle_position():  # Actively runs and receives live vehicle data on a separate thread
     '''
     This function is ran on a second thread to actively retrieve and update the vehicle state. This vehicle state contains GPS and vehicle orientation.
@@ -156,6 +164,12 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
         vehicle_data["dlon"] = float(items[9])
         vehicle_data["dalt"] = float(items[10])
         vehicle_data["heading"] = float(items[11])
+
+        print(vehicle_data)
+        return {
+            "vehicle_state": vehicle_data,
+        }
+
 
 if __name__ == "__main__":
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
