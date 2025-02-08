@@ -49,7 +49,12 @@ vehicle_data = {
     "dlat": 0,
     "dlon": 0,
     "dalt": 0,
-    "heading": 0
+    "heading": 0,
+    "num_satellites": 0,
+    "position_uncertainty": 0,
+    "alt_uncertainty": 0,
+    "speed_uncertainty": 0,
+    "heading_uncertainty": 0
 }
 
 @app.route('/set_flight_mode', methods=["POST"])
@@ -64,8 +69,6 @@ def set_flight_mode():
         return jsonify({'error': "Invalid operation."}), 400
 
     return jsonify({'message': 'Mode set successfully'}), 200
-
-
 
 @app.route("/toggle_camera", methods=["POST"])
 def toggle_camera():
@@ -128,12 +131,10 @@ def take_picture(image_number, picam2):
     
     return time.time() - start_time
 
-
 @app.route("/heartbeat-validate")
 def heartbeat_validate():
     # this is being updated by the thread
     return vehicle_data
-
 
 def receive_vehicle_position():  # Actively runs and receives live vehicle data on a separate thread
     '''
@@ -164,12 +165,16 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
         vehicle_data["dlon"] = float(items[9])
         vehicle_data["dalt"] = float(items[10])
         vehicle_data["heading"] = float(items[11])
+        vehicle_data["num_satellites"] = float(items[12])
+        vehicle_data["position_uncertainty"] = float(items[13])
+        vehicle_data["alt_uncertainty"] = float(items[14])
+        vehicle_data["speed_uncertainty"] = float(items[15])
+        vehicle_data["heading_uncertainty"] = float(items[16])
 
         print(vehicle_data)
         return {
             "vehicle_state": vehicle_data,
         }
-
 
 if __name__ == "__main__":
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
