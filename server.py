@@ -18,6 +18,7 @@ import RPi.GPIO as GPIO
 
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
+import modules.AutopilotDevelopment.Plane.Operations.system_state as system_state
 
 GCS_URL = "http://192.168.1.65:80"
 VEHICLE_PORT = "udp:127.0.0.1:5006"
@@ -62,6 +63,8 @@ def set_flight_mode():
         return jsonify({'error': "Invalid operation."}), 400
 
     return jsonify({'message': 'Mode set successfully'}), 200
+
+
 
 @app.route("/toggle_camera", methods=["POST"])
 def toggle_camera():
@@ -170,3 +173,11 @@ if __name__ == "__main__":
         sys.exit(1)
 
     app.run(debug=True, host='0.0.0.0')
+
+
+    time.sleep(5)
+    print(f"Testing receive system status: {system_state.receive_lat_long(vehicle_connection)}")
+    print(f"Testing receive_gps_raw: {system_state.receive_gps_raw(vehicle_connection)}")
+    print(f"Testing receive_lat_long: {system_state.receive_lat_long(vehicle_connection)}")
+    print(f"Testing gps_status: {system_state.receive_gps_status(vehicle_connection)}")
+    print(f"Testing receive_scaled_imu: {system_state.receive_scaled_imu(vehicle_connection)}")    
