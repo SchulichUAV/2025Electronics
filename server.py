@@ -19,6 +19,7 @@ import RPi.GPIO as GPIO
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
 import modules.AutopilotDevelopment.Plane.Operations.system_state as system_state
+import modules.payload as payload
 
 GCS_URL = "http://192.168.1.65:80"
 VEHICLE_PORT = "udp:127.0.0.1:5006"
@@ -56,6 +57,20 @@ vehicle_data = {
     "speed_uncertainty": 0,
     "heading_uncertainty": 0
 }
+
+@app.route('/set_servo_angles', methods=["POST"])
+def set_servo_angles():
+    data = request.json
+    try:
+        angle1 = int(data['angle1'])
+        angle2 = int(data['angle2'])
+        angle3 = int(data['angle3'])
+        angle4 = int(data['angle4'])
+        payload.set_angles(angle1, angle2, angle3, angle4)
+    except Exception as e:
+        return jsonify({'error': "Invalid operation."}), 400
+
+    return jsonify({'message': 'Servo angles set successfully'}), 200
 
 @app.route('/set_flight_mode', methods=["POST"])
 def set_flight_mode():
@@ -193,6 +208,11 @@ if __name__ == "__main__":
 
     app.run(debug=True, host='0.0.0.0')
 
+    try:
+        payload.configure_servos()
+    except Exception as e:
+        print("Error configuring servos.")
+        sys.exit(1)
 
     time.sleep(5)
     print(f"Testing receive system status: {system_state.receive_lat_long(vehicle_connection)}")
