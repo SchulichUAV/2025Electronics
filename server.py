@@ -20,10 +20,8 @@ import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
 import modules.AutopilotDevelopment.Plane.Operations.system_state as system_state
 
-GCS_URL = "http://192.168.1.65:80"
+GCS_URL = "http://192.168.1.64:80"
 VEHICLE_PORT = "udp:127.0.0.1:5006"
-ALTITUDE = 25
-UDP_PORT = 5005
 DELAY = 0.25
 
 picam2 = None
@@ -34,7 +32,7 @@ image_number = 0
 
 app = Flask(__name__)
 # Overriding CORS for external access
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, supports_credentials=True)
 
 # Dictionary to maintain vehicle state
 vehicle_data = {
@@ -60,7 +58,7 @@ vehicle_data = {
 @app.route('/set_flight_mode', methods=["POST"])
 def set_flight_mode():
 # Ardupilot docs (for flight modes): https://ardupilot.org/copter/docs/parameters.html
-    data = request.json
+    data = request.get_json(force=True)
     try:
         mode_id = int(data['mode_id'])
         print(mode_id)
@@ -74,14 +72,18 @@ def set_flight_mode():
 def toggle_camera():
     global picam2
     global image_number
-    
-    data = request.json
+    global is_camera_on
+
     try:
-        is_camera_on = bool(data["is_camera_on"])
+        json_data = request.json
+        is_camera_on = json_data["is_camera_on"]
+        print("SUCCESS")
     except Exception as e:
         print("Could not interpret `is_camera_on` value from API request.")
-
+        print(e)
+    print("Parsed camera on")
     if picam2 is None:
+        print("picam2 is None")
         picam2 = Picamera2()
         camera_config = picam2.create_still_configuration()
         picam2.configure(camera_config)
@@ -89,16 +91,17 @@ def toggle_camera():
         picam2.start()
         time.sleep(1)
     else:
+        print("picam2 is not none! starting picam.")
         picam2.start()
-
+    print("mapped picam2 properly")
     while is_camera_on:
+        print("looping over camera on")
         image_number += 1
         delay_time_remaining = DELAY - take_picture(image_number, picam2)
         if delay_time_remaining > 0:
             time.sleep(delay_time_remaining)
-    
+    print("stopping picam")
     picam2.stop()
-
     return { "message": "Success!"}, 200
 
 def take_picture(image_number, picam2):
@@ -128,7 +131,7 @@ def take_picture(image_number, picam2):
         'file': (f'capture{image_number}.json', json_stream, 'application/json'),
     }
     response = requests.request("POST", f"{GCS_URL}/submit", headers=headers, files=json_files)
-    
+
     return time.time() - start_time
 
 @app.route("/heartbeat-validate")
@@ -144,7 +147,7 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    sock.bind(("127.0.0.1", UDP_PORT))
+    sock.bind(("127.0.0.1", 5005))
     while True:
         data = sock.recvfrom(1024)
         items = data[0].decode()[1:-1].split(",")
@@ -171,10 +174,6 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
         vehicle_data["speed_uncertainty"] = float(items[15])
         vehicle_data["heading_uncertainty"] = float(items[16])
 
-        print(vehicle_data)
-        return {
-            "vehicle_state": vehicle_data,
-        }
 
 if __name__ == "__main__":
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
@@ -191,12 +190,4 @@ if __name__ == "__main__":
         print("Error. Could not connect and/or verify a valid connection to the vehicle.")
         sys.exit(1)
 
-    app.run(debug=True, host='0.0.0.0')
-
-
-    time.sleep(5)
-    print(f"Testing receive system status: {system_state.receive_lat_long(vehicle_connection)}")
-    print(f"Testing receive_gps_raw: {system_state.receive_gps_raw(vehicle_connection)}")
-    print(f"Testing receive_lat_long: {system_state.receive_lat_long(vehicle_connection)}")
-    print(f"Testing gps_status: {system_state.receive_gps_status(vehicle_connection)}")
-    print(f"Testing receive_scaled_imu: {system_state.receive_scaled_imu(vehicle_connection)}")    
+    app.run(debug=False, host='0.0.0.0', port=5000)
