@@ -81,7 +81,6 @@ def toggle_camera():
     except Exception as e:
         print("Could not interpret `is_camera_on` value from API request.")
         print(e)
-    print("Parsed camera on")
     if picam2 is None:
         print("picam2 is None")
         picam2 = Picamera2()
@@ -93,9 +92,7 @@ def toggle_camera():
     else:
         print("picam2 is not none! starting picam.")
         picam2.start()
-    print("mapped picam2 properly")
     while is_camera_on:
-        print("looping over camera on")
         image_number += 1
         delay_time_remaining = DELAY - take_picture(image_number, picam2)
         if delay_time_remaining > 0:
