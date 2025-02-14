@@ -49,7 +49,7 @@ def take_and_send_picture_no_local(i, picam2, vehicle_data, gcs_url):
 
     # Send image to GCS
     files = {
-        'file': (f'capture{i}.jpg', image_stream, 'image/jpeg'),
+        'file': (f'000{i:02d}.jpg', image_stream, 'image/jpeg'),
     }
     headers = {}
     response = requests.request("POST", f"{gcs_url}/submit", headers=headers, files=files)
@@ -57,7 +57,7 @@ def take_and_send_picture_no_local(i, picam2, vehicle_data, gcs_url):
     # Send JSON to GCS
     json_stream = BytesIO(vehicle_data_json.encode('utf-8'))
     json_files = {
-        'file': (f'capture{i}.json', json_stream, 'application/json'),
+        'file': (f'000{i:02d}.json', json_stream, 'application/json'),
     }
     response = requests.request("POST", f"{gcs_url}/submit", headers=headers, files=json_files)
 
