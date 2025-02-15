@@ -31,10 +31,8 @@ is_camera_on = False
 image_number = 0
 
 app = Flask(__name__)
-# Overriding CORS for external access
 CORS(app, supports_credentials=True)
 
-# Dictionary to maintain vehicle state
 vehicle_data = {
     "last_time": 0,
     "lat": 0,
@@ -58,11 +56,13 @@ vehicle_data = {
 @app.route('/set_flight_mode', methods=["POST"])
 def set_flight_mode():
 # Ardupilot docs (for flight modes): https://ardupilot.org/copter/docs/parameters.html
-    data = request.get_json(force=True)
     try:
-        mode_id = int(data['mode_id'])
+        json_data = request.json
+        mode_id = int(json_data['mode_id'])
+        # TODO: Need to determine if we are plane or copter mode when starting the server
+        # TODO: Retrieve mode_id mapping and print the mode name (mode mappings stored in AutopilotDevelopment/General/Operations/mode.py)
         print(mode_id)
-        print(autopilot_mode.set_mode(vehicle_connection, mode_id))
+        print(autopilot_mode.set_mode(vehicle_connection, mode_id)) # TODO: Need to use set_mode from plane.py or copter.py depending on current vehicle
     except Exception as e:
         return jsonify({'error': "Invalid operation."}), 400
 
@@ -170,6 +170,8 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
 
 
 if __name__ == "__main__":
+    # TODO: Need to take a parameter off of the command line to determine if we are a plane or copter
+
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
     position_thread.start()
     time.sleep(1)
