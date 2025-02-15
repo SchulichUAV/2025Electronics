@@ -19,6 +19,7 @@ import RPi.GPIO as GPIO
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
 import modules.AutopilotDevelopment.Plane.Operations.system_state as system_state
+import modules.payload as payload
 
 GCS_URL = "http://192.168.1.64:80"
 VEHICLE_PORT = "udp:127.0.0.1:5006"
@@ -67,6 +68,18 @@ def set_flight_mode():
         return jsonify({'error': "Invalid operation."}), 400
 
     return jsonify({'message': 'Mode set successfully'}), 200
+
+@app.route('/payload_control', methods=["POST"])
+def payload_control():
+    try:
+        json_data = request.json
+        payload_id = int(json_data['payload_id'])
+        payload_state = int(json_data['payload_state'])
+    except Exception as e:
+        return jsonify({'error': "Invalid operation."}), 400
+    
+    return jsonify({'message': 'Payload trigger successful'}), 200
+
 
 @app.route("/toggle_camera", methods=["POST"])
 def toggle_camera():
