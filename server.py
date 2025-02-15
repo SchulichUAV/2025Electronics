@@ -105,35 +105,32 @@ def take_picture(image_number, picam2):
     print(f"Beginning capturing capture{image_number}.jpg")
     start_time = time.time()
 
-    # Capture image into a temporary BytesIO object
     image_stream = BytesIO()
     image = picam2.capture_image('main')
     image.save(image_stream, format='JPEG')
     image_stream.seek(0)
 
-    # Serialize vehicle data into a JSON string
     vehicle_data_json = json.dumps(vehicle_data)
+    headers = {} 
 
-    # Send image to GCS
-    headers = {} # API Request headers
+    file_name = f'{image_number:05d}'
 
-    files = {
-        'file': (f'capture{image_number}.jpg', image_stream, 'image/jpg'),
+    image_file = {
+        'file': (f'{file_name}.jpg', image_stream, 'image/jpg'),
     }
-    response = requests.request("POST", f"{GCS_URL}/submit", headers=headers, files=files)
+    response = requests.request("POST", f"{GCS_URL}/submit", headers=headers, files=image_file)
 
-    # Send JSON to GCS (note that these need to be sent in a separate API request due to body datatype)
     json_stream = BytesIO(vehicle_data_json.encode('utf-8'))
-    json_files = {
-        'file': (f'capture{image_number}.json', json_stream, 'application/json'),
+    json_file = {
+        'file': (f'{file_name}.json', json_stream, 'application/json'),
     }
-    response = requests.request("POST", f"{GCS_URL}/submit", headers=headers, files=json_files)
+    response = requests.request("POST", f"{GCS_URL}/submit", headers=headers, files=json_file)
 
     return time.time() - start_time
 
 @app.route("/heartbeat-validate")
 def heartbeat_validate():
-    # this is being updated by the thread
+    # vehicle_data is being continuously updated by a separate thread
     return vehicle_data
 
 def receive_vehicle_position():  # Actively runs and receives live vehicle data on a separate thread
