@@ -25,18 +25,18 @@ def configure_servos():
     return servo1, servo2, servo3, servo4
 
 def payload_release(servo):
-    print("Opening servo...")
+    print(f"Opening servo{servo}.")
     servo.angle = 180
     sleep(3)
-    print("Closing servo...")
+    print(f"Closing servo{servo}.")
     servo.angle = 0
 
 def set_servo_state(servo, open):
     if open:
-        print("Opening servo. Not automatically closing.")
+        print(f"Opening servo{servo}. Not automatically closing.")
         servo.angle = 180
     else:
-        print("Closing servo.")
+        print(f"Closing servo{servo}.")
         servo.angle = 0
 
 def set_angles(angle1, angle2, angle3, angle4):

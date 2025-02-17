@@ -95,7 +95,7 @@ def payload_manual_control():
         print("Could not set servo state.")
         return jsonify({'error': "Invalid operation."}), 400
     
-    return jsonify({'message': 'Payload trigger successful'}), 200
+    return jsonify({'servo_status': payload_open, 'message': 'Payload trigger successful'}), 200
 
 @app.route('/payload_release', methods=["POST"])
 def payload_release():
