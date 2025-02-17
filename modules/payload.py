@@ -22,6 +22,23 @@ def configure_servos():
     servo4 = AngularServo(23, min_angle=0, max_angle=180,
     min_pulse_width=0.5/1000, max_pulse_width=2.5/1000)
 
+    return servo1, servo2, servo3, servo4
+
+def payload_release(servo):
+    print("Opening servo...")
+    servo.angle = 180
+    sleep(3)
+    print("Closing servo...")
+    servo.angle = 0
+
+def set_servo_state(servo, open):
+    if open:
+        print("Opening servo. Not automatically closing.")
+        servo.angle = 180
+    else:
+        print("Closing servo.")
+        servo.angle = 0
+
 def set_angles(angle1, angle2, angle3, angle4):
     global servo1, servo2, servo3, servo4
 
