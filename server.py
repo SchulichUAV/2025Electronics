@@ -16,6 +16,8 @@ from os import path
 import argparse
 import RPi.GPIO as GPIO
 
+from modules.AutopilotDevelopment.Plane.plane import Plane
+
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
 import modules.AutopilotDevelopment.Plane.Operations.system_state as system_state
@@ -171,7 +173,14 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
 
 if __name__ == "__main__":
     # TODO: Need to take a parameter off of the command line to determine if we are a plane or copter
-
+    if(sys.argv[1].lower() == "plane"):
+        vehicle = Plane(vehicle_connection)
+    elif(sys.argv[1].lower() == "copter"):
+        pass
+    else:
+        print(f"Unknown vehicle type: {sys.argv[1]}")
+        sys.exit(1)
+    
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
     position_thread.start()
     time.sleep(1)
