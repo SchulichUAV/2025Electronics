@@ -101,9 +101,13 @@ def payload_manual_control():
 def payload_release():
     try:
         json_data = request.json
-        payload_id = int(json_data['payload_id'])
+        payload_id = json_data['bay']
     except Exception as e:
         print("Could not interpret value from API request.")
+
+    if (servo1 == None or servo2 == None or servo3 == None or servo4 == None):
+        print("ERROR A SERVO IS NONE")
+
     try:
         if payload_id == 1:
             payload.payload_release(servo1)
@@ -222,7 +226,6 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
 
 
 if __name__ == "__main__":
-    # global servo1, servo2, servo3, servo4
     servo1, servo2, servo3, servo4 = payload.configure_servos()
     print("Servos configured.")
 
