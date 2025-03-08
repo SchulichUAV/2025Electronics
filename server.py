@@ -32,6 +32,7 @@ vehicle_connection = None
 image_number = 0
 is_camera_on = False
 image_number = 0
+vehicle = None
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
