@@ -1,4 +1,10 @@
 # payload algorithm
+import sys
+import os
+
+script_dir = os.path.abspath('./AutopilotDevelopment')
+sys.path.append(script_dir)
+
 from AutopilotDevelopment.Plane.Operations.waypoint import set_waypoint
 from AutopilotDevelopment.General.Operations import initialize as initialize
 
@@ -7,14 +13,14 @@ loop_mission = [(20, 40, 40), (50, 60, 40), (80, 80, 40),
                 (60, 60, 40), (50, 40, 40)]
 
 mission_itr = {"loop": loop_mission, "objects": object_detections}
-vehicle_connection, valid_connection = initialize.connect_to_vehicle(
-    'udpin:127.0.0.1:14550')
+vehicle_connection = initialize.connect_to_vehicle('udpin:127.0.0.1:14550')
 
 
 def execute_mission(mission, mission_name="UNNAMED"):
-    for coord in mission:
-        set_waypoint(vehicle_connection,
-                     coord[0], coord[1], coord[2], autocontinue=1)
+    for submission in mission:
+        for coord in submission:
+            set_waypoint(vehicle_connection, coord[0], coord[1], coord[2], autocontinue=1)
+            
 
     print(f"{mission_name} MISSION COMPLETED!")
 
@@ -41,3 +47,7 @@ def print_missions(mission_array):
                 print(coord)
             else:
                 print(coord, end="->")
+
+missions = create_loop_missions(object_detections, loop_mission)
+print_missions(missions)
+execute_mission(missions, "TEST MISSION")
