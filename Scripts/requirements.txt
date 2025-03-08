@@ -1,0 +1,3 @@
+flask_cors
+picamera2
+pymavlink

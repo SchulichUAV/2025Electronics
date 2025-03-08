@@ -27,7 +27,6 @@ DELAY = 0.25
 
 picam2 = None
 vehicle_connection = None
-image_number = 0
 is_camera_on = False
 image_number = 0
 
@@ -124,38 +123,89 @@ def payload_release():
     return jsonify({'message': 'Payload release successful'}), 200
 
 
+camera_thread = None
+stop_camera_thread = threading.Event()
+
 @app.route("/toggle_camera", methods=["POST"])
 def toggle_camera():
-    global picam2
+    # global picam2
     global image_number
     global is_camera_on
+    global camera_thread
+    global stop_camera_thread
 
     try:
         json_data = request.json
         is_camera_on = json_data["is_camera_on"]
+        image_number = json_data["image_count"]
         print("SUCCESS")
+   
     except Exception as e:
         print("Could not interpret `is_camera_on` value from API request.")
         print(e)
+
+    # if picam2 is None:
+    #     print("picam2 is None")
+    #     picam2 = Picamera2()
+    #     camera_config = picam2.create_still_configuration()
+    #     picam2.configure(camera_config)
+    #     picam2.start_preview(Preview.NULL)
+    #     picam2.start()
+    #     time.sleep(1)
+ 
+    # else:
+    #     print("picam2 is not none! starting picam.")
+    #     picam2.start()
+  
+    # while is_camera_on:
+    #     image_number += 1
+    #     delay_time_remaining = DELAY - take_picture(image_number, picam2)
+    #     if delay_time_remaining > 0:
+    #         time.sleep(delay_time_remaining)
+    # print("stopping picam")
+    # picam2.stop()
+    if is_camera_on:
+        if camera_thread is None or not camera_thread.is_alive():
+            stop_camera_thread.clear()
+            camera_thread = threading.Thread(target=continuously_capture_images)
+            camera_thread.start()
+            print("Starting camera")
+    else:
+        print("Stopping Camera")
+        stop_camera_thread.set()
+        # is_camera_on = False  # Ensure `is_camera_on` is updated globally
+
+
+    return { "message": "Success!"}, 200
+
+def continuously_capture_images():
+    global is_camera_on
+    global picam2
+    global image_number
+
     if picam2 is None:
-        print("picam2 is None")
+        print("Initializing camera...")
         picam2 = Picamera2()
         camera_config = picam2.create_still_configuration()
         picam2.configure(camera_config)
         picam2.start_preview(Preview.NULL)
-        picam2.start()
         time.sleep(1)
     else:
         print("picam2 is not none! starting picam.")
-        picam2.start()
-    while is_camera_on:
-        image_number += 1
-        delay_time_remaining = DELAY - take_picture(image_number, picam2)
-        if delay_time_remaining > 0:
-            time.sleep(delay_time_remaining)
-    print("stopping picam")
-    picam2.stop()
-    return { "message": "Success!"}, 200
+    
+    picam2.start()
+
+    try:
+        while is_camera_on and not stop_camera_thread.is_set():
+            image_number += 1
+            delay_time_remaining = DELAY - take_picture(image_number, picam2)
+            if delay_time_remaining > 0:
+                time.sleep(delay_time_remaining)
+    except Exception as e:
+        print("Error in camera thread:", e)
+    finally:
+        print("Stopping camera thread...")
+        picam2.stop()
 
 def take_picture(image_number, picam2):
     print(f"Beginning capturing capture{image_number}.jpg")
