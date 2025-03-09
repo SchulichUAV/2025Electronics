@@ -1,15 +1,12 @@
-# Check if flight computer username and hostname is provided
-if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <Flight Computer Username and Hostname>"
-    exit 1
-fi
+#!/bin/bash
+set -x
+set -v 
 
-FLIGHT_COMPUTER_USERNAME_AND_HOST="$1"
-SUAV_DIR="~/SUAV"
+SUAV_DIR="$HOME/SUAV"
 REPO_URL="https://github.com/SchulichUAV/2025Electronics.git" 
 VENV_NAME="venv"
 
-# Create temporary SUAV directory 
+# Create SUAV directory 
 if [ ! -d "$SUAV_DIR" ]; then
     echo "Creating directory: $SUAV_DIR"
     mkdir -p $SUAV_DIR
@@ -19,17 +16,14 @@ fi
 
 # Navigate to SUAV
 cd $SUAV_DIR || { echo "Failed to access SUAV"; exit 1; }
-echo "Current directory: $(pwd)"
 
-# Clone the temp Electronics2025 
-if [ ! -d "Electronics2025" ]; then
+# Clone Electronics2025 
+if [ ! -d "2025Electronics" ]; then
     echo "Cloning repository..."
     git clone "$REPO_URL"
 else
     echo "Repository already exists. Skipping clone."
 fi
-
-cd "2025Electronics" || { echo "Failed to access 2025Electronics directory"; exit 1; }
 
 # Setup Python virtual environment
 if [ ! -d "$VENV_NAME" ]; then
@@ -40,31 +34,15 @@ else
     echo "Virtual environment ($VENV_NAME) already exists."
 fi
 
-Activate virtual environment
+#Activate virtual environment
 echo "Activating virtual environment..."
-if [ -f "$VENV_NAME/scripts/activate" ]; then
-    # Windows (WSL or Git Bash)
-    echo "Activating virtual environment from Scripts/activate..."
-    source "$VENV_NAME/scripts/activate"
-elif [ -f "$VENV_NAME/bin/activate" ]; then
-    # Linux/macOS
-    echo "Activating virtual environment from bin/activate..."
-    source "$VENV_NAME/bin/activate"
-else
-    echo "Error: Virtual environment activation script not found!"
-    exit 1
-fi
+source "$VENV_NAME/bin/activate"
+
 # Install dependencies
 echo "Installing dependencies..."
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install flask_cors
+pip install picamera2
+pip install pymavlink
 
-# cd ../../
-
-# Move setup SUAV directory to flight computer
-# scp -r SUAV $FLIGHT_COMPUTER_USERNAME_AND_HOST:$SUAV_DIR
-
-# Cleanup 
-# rm -rf SUAV
-
-echo "\nSetup complete!"
+echo -e "\nSetup complete!"
