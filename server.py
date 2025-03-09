@@ -18,7 +18,6 @@ import RPi.GPIO as GPIO
 
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
-import modules.AutopilotDevelopment.Plane.Operations.system_state as system_state
 import modules.payload as payload
 
 GCS_URL = "http://192.168.1.64:80"
@@ -144,26 +143,6 @@ def toggle_camera():
         print("Could not interpret `is_camera_on` value from API request.")
         print(e)
 
-    # if picam2 is None:
-    #     print("picam2 is None")
-    #     picam2 = Picamera2()
-    #     camera_config = picam2.create_still_configuration()
-    #     picam2.configure(camera_config)
-    #     picam2.start_preview(Preview.NULL)
-    #     picam2.start()
-    #     time.sleep(1)
- 
-    # else:
-    #     print("picam2 is not none! starting picam.")
-    #     picam2.start()
-  
-    # while is_camera_on:
-    #     image_number += 1
-    #     delay_time_remaining = DELAY - take_picture(image_number, picam2)
-    #     if delay_time_remaining > 0:
-    #         time.sleep(delay_time_remaining)
-    # print("stopping picam")
-    # picam2.stop()
     if is_camera_on:
         if camera_thread is None or not camera_thread.is_alive():
             stop_camera_thread.clear()
@@ -173,8 +152,6 @@ def toggle_camera():
     else:
         print("Stopping Camera")
         stop_camera_thread.set()
-        # is_camera_on = False  # Ensure `is_camera_on` is updated globally
-
 
     return { "message": "Success!"}, 200
 
