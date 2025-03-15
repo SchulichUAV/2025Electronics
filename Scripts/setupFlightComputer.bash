@@ -41,6 +41,7 @@ source "$VENV_NAME/bin/activate"
 # Install dependencies
 echo "Installing dependencies..."
 pip install --upgrade pip
+pip install Flask
 pip install flask_cors
 pip install picamera2
 pip install pymavlink

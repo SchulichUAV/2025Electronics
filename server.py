@@ -127,7 +127,6 @@ stop_camera_thread = threading.Event()
 
 @app.route("/toggle_camera", methods=["POST"])
 def toggle_camera():
-    # global picam2
     global image_number
     global is_camera_on
     global camera_thread
