@@ -29,7 +29,6 @@ picam2 = None
 vehicle_connection = None
 image_number = 0
 is_camera_on = False
-image_number = 0
 
 servo1 = None
 servo2 = None
@@ -104,23 +103,33 @@ def payload_release():
         payload_id = json_data['bay']
     except Exception as e:
         print("Could not interpret value from API request.")
+        return jsonify({'error': "Invalid JSON request."}), 400
 
-    if (servo1 == None or servo2 == None or servo3 == None or servo4 == None):
-        print("ERROR A SERVO IS NONE")
+    # Map payload IDs to servos
+    servo_map = {
+        1: servo1,
+        2: servo2,
+        3: servo3,
+        4: servo4
+    }
+
+    # Check if any servo is None
+    if any(servo is None for servo in servo_map.values()):
+        return jsonify({'error': "One or more servos are not initialized."}), 500
+
+    # Get the corresponding servo
+    servo = servo_map.get(payload_id)
+
+    if servo is None:
+        print("Invalid payload bay ID.")
+        return jsonify({'error': "Invalid payload bay ID."}), 400
 
     try:
-        if payload_id == 1:
-            payload.payload_release(servo1)
-        elif payload_id == 2:
-            payload.payload_release(servo2)
-        elif payload_id == 3:
-            payload.payload_release(servo3)
-        elif payload_id == 4:
-            payload.payload_release(servo4)
+        payload.payload_release(servo)
     except Exception as e:
-        print("Could not release payload.")
-        return jsonify({'error': "Invalid operation."}), 400
-    
+        print("Could not release payload:", str(e))
+        return jsonify({'error': "Failed to release payload."}), 500
+
     return jsonify({'message': 'Payload release successful'}), 200
 
 

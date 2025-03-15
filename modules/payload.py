@@ -25,6 +25,7 @@ def payload_release(servo):
     try:
         servo.angle = 10
         print(f"Successfully opened servo: {servo}")
+        
         sleep(3)
         servo.angle = 180
         print(f"Closing servo: {servo}")
