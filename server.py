@@ -31,11 +31,6 @@ image_number = 0
 is_camera_on = False
 image_number = 0
 
-servo1 = None
-servo2 = None
-servo3 = None
-servo4 = None
-
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
@@ -74,29 +69,6 @@ def set_flight_mode():
 
     return jsonify({'message': 'Mode set successfully'}), 200
 
-@app.route('/payload_manual_control', methods=["POST"])
-def payload_manual_control():
-    try:
-        json_data = request.json
-        payload_id = int(json_data['payload_id'])
-        payload_open = bool(json_data['payload_open'])
-    except Exception as e:
-        print("Could not interpret value from API request.")
-    try:
-        if payload_id == 1:
-            payload.set_servo_state(servo1, payload_open)
-        elif payload_id == 2:
-            payload.set_servo_state(servo2, payload_open)
-        elif payload_id == 3:
-            payload.set_servo_state(servo3, payload_open)
-        elif payload_id == 4:
-            payload.set_servo_state(servo4, payload_open)
-    except Exception as e:
-        print("Could not set servo state.")
-        return jsonify({'error': "Invalid operation."}), 400
-    
-    return jsonify({'servo_status': payload_open, 'message': 'Payload trigger successful'}), 200
-
 @app.route('/payload_release', methods=["POST"])
 def payload_release():
     try:
@@ -105,18 +77,8 @@ def payload_release():
     except Exception as e:
         print("Could not interpret value from API request.")
 
-    if (servo1 == None or servo2 == None or servo3 == None or servo4 == None):
-        print("ERROR A SERVO IS NONE")
-
     try:
-        if payload_id == 1:
-            payload.payload_release(servo1)
-        elif payload_id == 2:
-            payload.payload_release(servo2)
-        elif payload_id == 3:
-            payload.payload_release(servo3)
-        elif payload_id == 4:
-            payload.payload_release(servo4)
+        payload.payload_release(payload_id)
     except Exception as e:
         print("Could not release payload.")
         return jsonify({'error': "Invalid operation."}), 400
@@ -226,7 +188,7 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
 
 
 if __name__ == "__main__":
-    servo1, servo2, servo3, servo4 = payload.configure_servos()
+    payload.configure_servos()
     print("Servos configured.")
 
     # TODO: Need to take a parameter off of the command line to determine if we are a plane or copter

@@ -1,40 +1,45 @@
-from gpiozero import AngularServo
 from time import sleep
+import pigpio
 
-pin1 = 14 # Corresponds to bay 1
-pin2 = 15 # Corresponds to bay 2
-pin3 = 18 # Corresponds to bay 3
-pin4 = 23 # Corresponds to bay 4
+pi = None
+
+pin_dict = {
+    1: 14, #pin1
+    2: 15, #pin2
+    3: 18, #pin3
+    4: 23  #pin4
+}
+
+def set_servo_angle(pin, target_angle):
+    """Gradually moves the servo to the target angle."""
+    step = 15
+    delay = 0.003
+    current_pulse = max(pi.get_servo_pulsewidth(pin), 500)    
+    current_angle = (current_pulse - 500) * (180 / 2000)
+    
+    if target_angle <= current_angle:
+        step = -step
+
+    #will increment the current angle to the target angle using step
+    for angle in range(int(current_angle), target_angle + step, step):
+        pulse_width = 500 + (angle / 180.0) * 2000
+        pi.set_servo_pulsewidth(pin, pulse_width)
+        sleep(delay)
 
 def configure_servos():
-    servo1 = AngularServo(pin1, min_angle=0, max_angle=180,
-    min_pulse_width=0.5/1000, max_pulse_width=2.5/1000)
+    global pi
+    pi = pigpio.pi()
+    if not pi.connected:
+        print("Failed to connect")
+        exit()
 
-    servo2 = AngularServo(pin2, min_angle=0, max_angle=180,
-    min_pulse_width=0.5/1000, max_pulse_width=2.5/1000)
-
-    servo3 = AngularServo(pin3, min_angle=0, max_angle=180,
-    min_pulse_width=0.5/1000, max_pulse_width=2.5/1000)
-
-    servo4 = AngularServo(pin4, min_angle=0, max_angle=180,
-    min_pulse_width=0.5/1000, max_pulse_width=2.5/1000)
-
-    return servo1, servo2, servo3, servo4
-
-def payload_release(servo):
+def payload_release(payload_id):
     try:
-        servo.angle = 10
-        print(f"Successfully opened servo: {servo}")
+        pin = pin_dict[payload_id]
+        set_servo_angle(pin, 0)
+        print(f"Successfully opened servo: {pin}")
         sleep(3)
-        servo.angle = 180
-        print(f"Closing servo: {servo}")
+        set_servo_angle(pin, 180)
+        print(f"Closing servo: {pin}")
     except Exception as e:
         print(f"Could not open or close servo. Error: {e}")
-
-def set_servo_state(servo, open):
-    if open:
-        print(f"Opening servo{servo}. Not automatically closing.")
-        servo.angle = 180
-    else:
-        print(f"Closing servo{servo}.")
-        servo.angle = 10
