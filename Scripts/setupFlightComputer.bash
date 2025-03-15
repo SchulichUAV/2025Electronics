@@ -45,5 +45,6 @@ pip install Flask
 pip install flask_cors
 pip install picamera2
 pip install pymavlink
+pip install MAVProxy
 
 echo -e "\nSetup complete!"
