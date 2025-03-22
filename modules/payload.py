@@ -1,4 +1,5 @@
 from time import sleep
+import requests
 import pigpio
 
 pi = None
@@ -33,13 +34,16 @@ def configure_servos():
         print("Failed to connect")
         exit()
 
-def payload_release(payload_id):
+def payload_release(payload_id, GCS_URL):
     try:
         pin = pin_dict[payload_id]
         set_servo_angle(pin, 0)
         print(f"Successfully opened servo: {pin}")
+        response = requests.request("POST", f"{GCS_URL}/payload_status", headers={}, body={"servo_open":True})
         sleep(3)
         set_servo_angle(pin, 180)
         print(f"Closing servo: {pin}")
+        response = requests.request("POST", f"{GCS_URL}/payload_status", headers={}, body={"servo_open":False})
+
     except Exception as e:
         print(f"Could not open or close servo. Error: {e}")

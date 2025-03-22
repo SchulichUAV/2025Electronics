@@ -76,7 +76,7 @@ def payload_release():
         print("Could not interpret value from API request.")
 
     try:
-        payload.payload_release(payload_id)
+        payload.payload_release(payload_id, GCS_URL)
     except Exception as e:
         print("Could not release payload.")
         return jsonify({'error': "Invalid operation."}), 400
