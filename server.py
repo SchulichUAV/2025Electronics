@@ -57,8 +57,12 @@ def set_flight_mode():
 # Ardupilot docs (for flight modes): https://ardupilot.org/copter/docs/parameters.html
     try:
         json_data = request.json
+        # vehicle_mode = int(json_data['vehicle_mode'])
         mode_id = int(json_data['mode_id'])
         # TODO: Need to determine if we are plane or copter mode when starting the server
+        selected_flight_mode = autopilot_mode.plane_modes.get(mode_id)
+        print(f'We are in: {selected_flight_mode}')
+
         # TODO: Retrieve mode_id mapping and print the mode name (mode mappings stored in AutopilotDevelopment/General/Operations/mode.py)
         print(mode_id)
         print(autopilot_mode.set_mode(vehicle_connection, mode_id)) # TODO: Need to use set_mode from plane.py or copter.py depending on current vehicle
@@ -211,6 +215,7 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
         vehicle_data["alt_uncertainty"] = float(items[14])
         vehicle_data["speed_uncertainty"] = float(items[15])
         vehicle_data["heading_uncertainty"] = float(items[16])
+        vehicle_data["flight_mode"] = float(items[17])
 
 
 if __name__ == "__main__":
