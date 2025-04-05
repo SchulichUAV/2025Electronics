@@ -18,6 +18,7 @@ import RPi.GPIO as GPIO
 
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
+import modules.AutopilotDevelopment.Plane.Operations.altitude as altitude_module
 import modules.payload as payload
 
 GCS_URL = "http://192.168.1.64:80"
@@ -49,7 +50,8 @@ vehicle_data = {
     "position_uncertainty": 0,
     "alt_uncertainty": 0,
     "speed_uncertainty": 0,
-    "heading_uncertainty": 0
+    "heading_uncertainty": 0,
+    "flight_mode": 0
 }
 
 @app.route('/set_flight_mode', methods=["POST"])
@@ -57,11 +59,26 @@ def set_flight_mode():
 # Ardupilot docs (for flight modes): https://ardupilot.org/copter/docs/parameters.html
     try:
         json_data = request.json
+        # vehicle_mode = int(json_data['vehicle_mode'])
         mode_id = int(json_data['mode_id'])
         # TODO: Need to determine if we are plane or copter mode when starting the server
-        # TODO: Retrieve mode_id mapping and print the mode name (mode mappings stored in AutopilotDevelopment/General/Operations/mode.py)
-        print(mode_id)
+        selected_flight_mode = list(autopilot_mode.plane_modes.keys())[mode_id] # list of keys in dictionary, access the key with mode id as index
+        print(f'We are in: {selected_flight_mode}')
+
+        # Retrieve mode_id mapping and print the mode name (mode mappings stored in AutopilotDevelopment/General/Operations/mode.py)
         print(autopilot_mode.set_mode(vehicle_connection, mode_id)) # TODO: Need to use set_mode from plane.py or copter.py depending on current vehicle
+    except Exception as e:
+        return jsonify({'error': "Invalid operation."}), 400
+
+    return jsonify({'message': 'Mode set successfully'}), 200
+
+@app.route('/set_altitude_goto', methods=["POST"])
+def set_altitude_goto():
+    try:
+        json_data = request.json
+        altitude = int(json_data['altitude'])
+        altitude_module.set_current_altitude(vehicle_connection, altitude)
+        print(f'Setting altitude to: {altitude}')
     except Exception as e:
         return jsonify({'error': "Invalid operation."}), 400
 
@@ -211,6 +228,7 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
         vehicle_data["alt_uncertainty"] = float(items[14])
         vehicle_data["speed_uncertainty"] = float(items[15])
         vehicle_data["heading_uncertainty"] = float(items[16])
+        vehicle_data["flight_mode"] = float(items[17])
 
 
 if __name__ == "__main__":
