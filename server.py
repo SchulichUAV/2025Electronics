@@ -49,7 +49,8 @@ vehicle_data = {
     "position_uncertainty": 0,
     "alt_uncertainty": 0,
     "speed_uncertainty": 0,
-    "heading_uncertainty": 0
+    "heading_uncertainty": 0,
+    "flight_mode": 0
 }
 
 @app.route('/set_flight_mode', methods=["POST"])
