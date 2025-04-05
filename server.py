@@ -18,6 +18,7 @@ import RPi.GPIO as GPIO
 
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
+import modules.AutopilotDevelopment.Plane.Operations.altitude as altitude
 import modules.payload as payload
 
 GCS_URL = "http://192.168.1.64:80"
@@ -66,6 +67,18 @@ def set_flight_mode():
 
         # Retrieve mode_id mapping and print the mode name (mode mappings stored in AutopilotDevelopment/General/Operations/mode.py)
         print(autopilot_mode.set_mode(vehicle_connection, mode_id)) # TODO: Need to use set_mode from plane.py or copter.py depending on current vehicle
+    except Exception as e:
+        return jsonify({'error': "Invalid operation."}), 400
+
+    return jsonify({'message': 'Mode set successfully'}), 200
+
+@app.route('/set_altitude_goto', methods=["POST"])
+def set_altitude_goto():
+    try:
+        json_data = request.json
+        altitude = int(json_data['altitude'])
+        altitude.set_current_altitude(vehicle_connection, altitude)
+        print(f'Setting altitude to: {altitude}')
     except Exception as e:
         return jsonify({'error': "Invalid operation."}), 400
 
