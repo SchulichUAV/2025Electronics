@@ -18,7 +18,7 @@ import RPi.GPIO as GPIO
 
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
-import modules.AutopilotDevelopment.Plane.Operations.altitude as altitude
+import modules.AutopilotDevelopment.Plane.Operations.altitude as altitude_module
 import modules.payload as payload
 
 GCS_URL = "http://192.168.1.64:80"
@@ -77,7 +77,7 @@ def set_altitude_goto():
     try:
         json_data = request.json
         altitude = int(json_data['altitude'])
-        altitude.set_current_altitude(vehicle_connection, altitude)
+        altitude_module.set_current_altitude(vehicle_connection, altitude)
         print(f'Setting altitude to: {altitude}')
     except Exception as e:
         return jsonify({'error': "Invalid operation."}), 400
