@@ -45,6 +45,10 @@ vehicle_data = {
     "dlon": 0,
     "dalt": 0,
     "heading": 0,
+    "airspeed": 0,
+    "groundspeed": 0,
+    "throttle": 0,
+    "climb": 0,
     "num_satellites": 0,
     "position_uncertainty": 0,
     "alt_uncertainty": 0,
@@ -194,24 +198,13 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
         if message_time <= vehicle_data["last_time"]:
             continue
 
-        vehicle_data["last_time"] = message_time
-        vehicle_data["lon"] = float(items[1])
-        vehicle_data["lat"] = float(items[2])
-        vehicle_data["rel_alt"] = float(items[3])
-        vehicle_data["alt"] = float(items[4])
-        vehicle_data["roll"] = float(items[5])
-        vehicle_data["pitch"] = float(items[6])
-        vehicle_data["yaw"] = float(items[7])
-        vehicle_data["dlat"] = float(items[8])
-        vehicle_data["dlon"] = float(items[9])
-        vehicle_data["dalt"] = float(items[10])
-        vehicle_data["heading"] = float(items[11])
-        vehicle_data["num_satellites"] = float(items[12])
-        vehicle_data["position_uncertainty"] = float(items[13])
-        vehicle_data["alt_uncertainty"] = float(items[14])
-        vehicle_data["speed_uncertainty"] = float(items[15])
-        vehicle_data["heading_uncertainty"] = float(items[16])
+        if len(items) == len(vehicle_data):
+            vehicle_data["last_time"] = message_time
 
+            for i, key in enumerate(list(vehicle_data.keys())[1:], start=1):
+                vehicle_data[key] = float(items[i])
+        else:
+            print(f"Recieved data item does not match expected length...")
 
 if __name__ == "__main__":
     payload.configure_servos()
