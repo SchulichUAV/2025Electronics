@@ -204,7 +204,7 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
             for i, key in enumerate(list(vehicle_data.keys())[1:], start=1):
                 vehicle_data[key] = float(items[i])
         else:
-            print(f"Recieved data item does not match expected length...")
+            print(f"Received data item does not match expected length...")
 
 if __name__ == "__main__":
     payload.configure_servos()
