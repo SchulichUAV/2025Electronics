@@ -14,7 +14,10 @@ import time
 from io import BytesIO
 from os import path
 import argparse
-import RPi.GPIO as GPIO
+import RPi.GPIO  as GPIO
+
+from modules.AutopilotDevelopment.Plane.plane import Plane
+from modules.AutopilotDevelopment.Copter.copterObject import Copter
 
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
@@ -30,11 +33,7 @@ vehicle_connection = None
 image_number = 0
 is_camera_on = False
 image_number = 0
-
-servo1 = None
-servo2 = None
-servo3 = None
-servo4 = None
+vehicle = None
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -56,7 +55,8 @@ vehicle_data = {
     "position_uncertainty": 0,
     "alt_uncertainty": 0,
     "speed_uncertainty": 0,
-    "heading_uncertainty": 0
+    "heading_uncertainty": 0,
+    "payload_drop_success": 0
 }
 
 @app.route('/set_flight_mode', methods=["POST"])
@@ -224,13 +224,34 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
         vehicle_data["speed_uncertainty"] = float(items[15])
         vehicle_data["heading_uncertainty"] = float(items[16])
 
+@app.route("/start-payload-drop")
+def start_payload_drop_mission():
+    try:
+        if isinstance(vehicle, Plane):
+            # todo pull data from request
+            payload_object_coord = 0
+            drop_distance = 0
+            vehicle.start_payload_drop_mission(payload_object_coord, drop_distance)
+            vehicle_data["payload_drop_success"] = True
+        else:
+            raise TypeError("Payload drop mission is only available for Plane vehicles.")
+    except Exception as e:
+        print(f"Could not start payload drop mission: {e}")
+
 
 if __name__ == "__main__":
     servo1, servo2, servo3, servo4 = payload.configure_servos()
     print("Servos configured.")
 
     # TODO: Need to take a parameter off of the command line to determine if we are a plane or copter
-
+    if(sys.argv[1].lower() == "plane"):
+        vehicle = Plane()
+    elif(sys.argv[1].lower() == "copter"):
+        vehicle = Copter() #not yet merged into the AutopilotDevelopment submodule, should work once merged 
+    else:
+        print(f"Unknown vehicle type: {sys.argv[1]}")
+        sys.exit(1)
+    
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
     position_thread.start()
     time.sleep(1)
