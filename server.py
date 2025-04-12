@@ -16,6 +16,9 @@ from os import path
 import argparse
 import RPi.GPIO as GPIO
 
+from modules.AutopilotDevelopment.Plane.plane import Plane
+from modules.AutopilotDevelopment.Copter.copterObject import Copter # not yet merged into AutopilotDevelopment submodule
+
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
 import modules.payload as payload
@@ -28,6 +31,7 @@ picam2 = None
 vehicle_connection = None
 is_camera_on = False
 image_number = 0
+vehicle = None
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -211,7 +215,14 @@ if __name__ == "__main__":
     print("Servos configured.")
 
     # TODO: Need to take a parameter off of the command line to determine if we are a plane or copter
-
+    if(sys.argv[1].lower() == "plane"):
+        vehicle = Plane()
+    elif(sys.argv[1].lower() == "copter"):
+        vehicle = Copter() #not yet merged into the AutopilotDevelopment submodule, should work once merged 
+    else:
+        print(f"Unknown vehicle type: {sys.argv[1]}")
+        sys.exit(1)
+    
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
     position_thread.start()
     time.sleep(1)
