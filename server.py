@@ -228,7 +228,7 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
 def start_payload_drop_mission():
     try:
         if isinstance(vehicle, Plane):
-            # todo pull data from request
+            # todo pull data
             payload_object_coord = 0
             drop_distance = 0
             vehicle.start_payload_drop_mission(payload_object_coord, drop_distance)
