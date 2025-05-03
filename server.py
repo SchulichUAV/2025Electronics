@@ -5,6 +5,7 @@ from picamera2 import Picamera2, Preview
 from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 from math import ceil
+from adafruit_servokit import ServoKit
 import requests
 import threading
 import socket
@@ -20,6 +21,7 @@ import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
 import modules.payload as payload
 
+
 GCS_URL = "http://192.168.1.64:80"
 VEHICLE_PORT = "udp:127.0.0.1:5006"
 DELAY = 0.25
@@ -28,6 +30,8 @@ picam2 = None
 vehicle_connection = None
 is_camera_on = False
 image_number = 0
+
+kit = None
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -71,6 +75,29 @@ def set_flight_mode():
 
     return jsonify({'message': 'Mode set successfully'}), 200
 
+@app.route('/payload_manual_control', methods=["POST"])
+def payload_manual_control():
+    try:
+        json_data = request.json
+        payload_id = int(json_data['payload_id'])
+        payload_open = bool(json_data['payload_open'])
+    except Exception as e:
+        print("Could not interpret value from API request.")
+    # try:
+    #     if payload_id == 1:
+    #         payload.payload_release(servo, payload_open)
+    #     elif payload_id == 2:
+    #         payload.payload_release(servo2, payload_open)
+    #     elif payload_id == 3:
+    #         payload.payload_release(servo3, payload_open)
+    #     elif payload_id == 4:
+    #         payload.payload_release(servo4, payload_open)
+    # except Exception as e:
+    #     print("Could not set servo state.")
+    #     return jsonify({'error': "Invalid operation."}), 400
+    
+    return jsonify({'servo_status': payload_open, 'message': 'Payload trigger successful'}), 200
+
 @app.route('/payload_release', methods=["POST"])
 def payload_release():
     try:
@@ -79,8 +106,18 @@ def payload_release():
     except Exception as e:
         print("Could not interpret value from API request.")
 
+    if (servo1 == None or servo2 == None or servo3 == None or servo4 == None):
+        print("ERROR A SERVO IS NONE")
+    
     try:
-        payload.payload_release(payload_id)
+        if payload_id == 1:
+            payload.payload_release(kit, 0)
+        elif payload_id == 2:
+            payload.payload_release(kit, 1)
+        elif payload_id == 3:
+            payload.payload_release(kit, 2)
+        elif payload_id == 4:
+            payload.payload_release(kit, 3)
     except Exception as e:
         print("Could not release payload.")
         return jsonify({'error': "Invalid operation."}), 400
@@ -207,9 +244,10 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
             print(f"Received data item does not match expected length...")
 
 if __name__ == "__main__":
-    payload.configure_servos()
-    print("Servos configured.")
+    kit = ServoKit(channels=16)
 
+    print("Servos configured.")
+ 
     # TODO: Need to take a parameter off of the command line to determine if we are a plane or copter
 
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
