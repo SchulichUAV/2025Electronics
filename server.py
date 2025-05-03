@@ -87,6 +87,25 @@ def payload_release():
     
     return jsonify({'message': 'Payload release successful'}), 200
 
+@app.route('/request_and_receive_wind_data', methods=["POST"])
+def request_and_receive_wind_data():
+    try:
+        json_data = request.json
+        payload_id = json_data['bay']
+        vehicle.request_and_receive_wind_data(vehicle_connection)
+    except Exception as e:
+        print("Could not interpret value from API request.")
+
+    try:
+        payload.payload_release(payload_id)
+    except Exception as e:
+        print("Could not release payload.")
+        return jsonify({'error': "Invalid operation."}), 400
+    
+    return jsonify({'message': 'Payload release successful'}), 200
+
+
+
 
 camera_thread = None
 stop_camera_thread = threading.Event()
