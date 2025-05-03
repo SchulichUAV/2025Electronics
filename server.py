@@ -18,7 +18,6 @@ import RPi.GPIO as GPIO
 
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
-import modules.AutopilotDevelopment.Plane.Operations.system_state as system_state
 import modules.payload as payload
 
 GCS_URL = "http://192.168.1.64:80"
@@ -27,14 +26,8 @@ DELAY = 0.25
 
 picam2 = None
 vehicle_connection = None
-image_number = 0
 is_camera_on = False
 image_number = 0
-
-servo1 = None
-servo2 = None
-servo3 = None
-servo4 = None
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -52,6 +45,10 @@ vehicle_data = {
     "dlon": 0,
     "dalt": 0,
     "heading": 0,
+    "airspeed": 0,
+    "groundspeed": 0,
+    "throttle": 0,
+    "climb": 0,
     "num_satellites": 0,
     "position_uncertainty": 0,
     "alt_uncertainty": 0,
@@ -74,29 +71,6 @@ def set_flight_mode():
 
     return jsonify({'message': 'Mode set successfully'}), 200
 
-@app.route('/payload_manual_control', methods=["POST"])
-def payload_manual_control():
-    try:
-        json_data = request.json
-        payload_id = int(json_data['payload_id'])
-        payload_open = bool(json_data['payload_open'])
-    except Exception as e:
-        print("Could not interpret value from API request.")
-    try:
-        if payload_id == 1:
-            payload.set_servo_state(servo1, payload_open)
-        elif payload_id == 2:
-            payload.set_servo_state(servo2, payload_open)
-        elif payload_id == 3:
-            payload.set_servo_state(servo3, payload_open)
-        elif payload_id == 4:
-            payload.set_servo_state(servo4, payload_open)
-    except Exception as e:
-        print("Could not set servo state.")
-        return jsonify({'error': "Invalid operation."}), 400
-    
-    return jsonify({'servo_status': payload_open, 'message': 'Payload trigger successful'}), 200
-
 @app.route('/payload_release', methods=["POST"])
 def payload_release():
     try:
@@ -105,18 +79,8 @@ def payload_release():
     except Exception as e:
         print("Could not interpret value from API request.")
 
-    if (servo1 == None or servo2 == None or servo3 == None or servo4 == None):
-        print("ERROR A SERVO IS NONE")
-
     try:
-        if payload_id == 1:
-            payload.payload_release(servo1)
-        elif payload_id == 2:
-            payload.payload_release(servo2)
-        elif payload_id == 3:
-            payload.payload_release(servo3)
-        elif payload_id == 4:
-            payload.payload_release(servo4)
+        payload.payload_release(payload_id)
     except Exception as e:
         print("Could not release payload.")
         return jsonify({'error': "Invalid operation."}), 400
@@ -124,38 +88,66 @@ def payload_release():
     return jsonify({'message': 'Payload release successful'}), 200
 
 
+camera_thread = None
+stop_camera_thread = threading.Event()
+
 @app.route("/toggle_camera", methods=["POST"])
 def toggle_camera():
-    global picam2
     global image_number
     global is_camera_on
+    global camera_thread
+    global stop_camera_thread
 
     try:
         json_data = request.json
         is_camera_on = json_data["is_camera_on"]
+        image_number = json_data["image_count"]
         print("SUCCESS")
+   
     except Exception as e:
         print("Could not interpret `is_camera_on` value from API request.")
         print(e)
+
+    if is_camera_on:
+        if camera_thread is None or not camera_thread.is_alive():
+            stop_camera_thread.clear()
+            camera_thread = threading.Thread(target=continuously_capture_images)
+            camera_thread.start()
+            print("Starting camera")
+    else:
+        print("Stopping Camera")
+        stop_camera_thread.set()
+
+    return { "message": "Success!"}, 200
+
+def continuously_capture_images():
+    global is_camera_on
+    global picam2
+    global image_number
+
     if picam2 is None:
-        print("picam2 is None")
+        print("Initializing camera...")
         picam2 = Picamera2()
         camera_config = picam2.create_still_configuration()
         picam2.configure(camera_config)
         picam2.start_preview(Preview.NULL)
-        picam2.start()
         time.sleep(1)
     else:
         print("picam2 is not none! starting picam.")
-        picam2.start()
-    while is_camera_on:
-        image_number += 1
-        delay_time_remaining = DELAY - take_picture(image_number, picam2)
-        if delay_time_remaining > 0:
-            time.sleep(delay_time_remaining)
-    print("stopping picam")
-    picam2.stop()
-    return { "message": "Success!"}, 200
+    
+    picam2.start()
+
+    try:
+        while is_camera_on and not stop_camera_thread.is_set():
+            image_number += 1
+            delay_time_remaining = DELAY - take_picture(image_number, picam2)
+            if delay_time_remaining > 0:
+                time.sleep(delay_time_remaining)
+    except Exception as e:
+        print("Error in camera thread:", e)
+    finally:
+        print("Stopping camera thread...")
+        picam2.stop()
 
 def take_picture(image_number, picam2):
     print(f"Beginning capturing capture{image_number}.jpg")
@@ -206,27 +198,16 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
         if message_time <= vehicle_data["last_time"]:
             continue
 
-        vehicle_data["last_time"] = message_time
-        vehicle_data["lon"] = float(items[1])
-        vehicle_data["lat"] = float(items[2])
-        vehicle_data["rel_alt"] = float(items[3])
-        vehicle_data["alt"] = float(items[4])
-        vehicle_data["roll"] = float(items[5])
-        vehicle_data["pitch"] = float(items[6])
-        vehicle_data["yaw"] = float(items[7])
-        vehicle_data["dlat"] = float(items[8])
-        vehicle_data["dlon"] = float(items[9])
-        vehicle_data["dalt"] = float(items[10])
-        vehicle_data["heading"] = float(items[11])
-        vehicle_data["num_satellites"] = float(items[12])
-        vehicle_data["position_uncertainty"] = float(items[13])
-        vehicle_data["alt_uncertainty"] = float(items[14])
-        vehicle_data["speed_uncertainty"] = float(items[15])
-        vehicle_data["heading_uncertainty"] = float(items[16])
+        if len(items) == len(vehicle_data):
+            vehicle_data["last_time"] = message_time
 
+            for i, key in enumerate(list(vehicle_data.keys())[1:], start=1):
+                vehicle_data[key] = float(items[i])
+        else:
+            print(f"Received data item does not match expected length...")
 
 if __name__ == "__main__":
-    servo1, servo2, servo3, servo4 = payload.configure_servos()
+    payload.configure_servos()
     print("Servos configured.")
 
     # TODO: Need to take a parameter off of the command line to determine if we are a plane or copter
