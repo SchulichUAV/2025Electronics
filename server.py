@@ -54,6 +54,7 @@ vehicle_data = {
     "alt_uncertainty": 0,
     "speed_uncertainty": 0,
     "heading_uncertainty": 0,
+    "flight_mode": 0,
     "wind_direction": 0,
     "wind_speed": 0,
     "wind_vertical_speed": 0
@@ -66,8 +67,7 @@ def set_flight_mode():
         json_data = request.json
         mode_id = int(json_data['mode_id'])
         # TODO: Need to determine if we are plane or copter mode when starting the server
-        # TODO: Retrieve mode_id mapping and print the mode name (mode mappings stored in AutopilotDevelopment/General/Operations/mode.py)
-        print(mode_id)
+        selected_flight_mode = list(autopilot_mode.plane_modes.keys())[mode_id] # list of keys in dictionary, access the key with mode id as index
         print(autopilot_mode.set_mode(vehicle_connection, mode_id)) # TODO: Need to use set_mode from plane.py or copter.py depending on current vehicle
     except Exception as e:
         return jsonify({'error': "Invalid operation."}), 400
