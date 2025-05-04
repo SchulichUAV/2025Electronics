@@ -97,51 +97,41 @@ def payload_drop_mission():
 
 @app.route('/payload_manual_control', methods=["POST"])
 def payload_manual_control():
-    try:
-        json_data = request.json
-        payload_id = int(json_data['payload_id'])
-        payload_open = bool(json_data['payload_open'])
-    except Exception as e:
-        print("Could not interpret value from API request.")
-    # try:
-    #     if payload_id == 1:
-    #         payload.payload_release(servo, payload_open)
-    #     elif payload_id == 2:
-    #         payload.payload_release(servo2, payload_open)
-    #     elif payload_id == 3:
-    #         payload.payload_release(servo3, payload_open)
-    #     elif payload_id == 4:
-    #         payload.payload_release(servo4, payload_open)
-    # except Exception as e:
-    #     print("Could not set servo state.")
-    #     return jsonify({'error': "Invalid operation."}), 400
-    
+    json_data = request.get_json()
+    payload_id = json_data.get('payload_id')
+    payload_open = json_data.get('payload_open')
+
+    if not isinstance(payload_id, int) or not isinstance(payload_open, bool):
+        print("Invalid or missing parameters in API request.")
+        return jsonify({'error': 'Invalid payload_id or payload_open.'}), 400
+
+    if 1 <= payload_id <= 4:
+        try:
+            payload.set_servo_state(payload_id - 1, payload_open)
+        except Exception as e:
+            print("Could not set servo state:", e)
+            return jsonify({'error': "Failed to set servo state."}), 400
+    else:
+        return jsonify({'error': 'Invalid payload_id (must be 1-4).'}), 400
+
     return jsonify({'servo_status': payload_open, 'message': 'Payload trigger successful'}), 200
+
 
 @app.route('/payload_release', methods=["POST"])
 def payload_release():
-    try:
-        json_data = request.json
-        payload_id = json_data['bay']
-    except Exception as e:
-        print("Could not interpret value from API request.")
+    json_data = request.get_json()
+    payload_id = json_data.get('bay')
 
-    if (servo1 == None or servo2 == None or servo3 == None or servo4 == None):
-        print("ERROR A SERVO IS NONE")
-    
+    if not isinstance(payload_id, int) or not (1 <= payload_id <= 4):
+        print("Invalid or missing payload_id.")
+        return jsonify({'error': 'Invalid bay (must be an integer from 1 to 4).'}), 400
+
     try:
-        if payload_id == 1:
-            payload.payload_release(kit, 0)
-        elif payload_id == 2:
-            payload.payload_release(kit, 1)
-        elif payload_id == 3:
-            payload.payload_release(kit, 2)
-        elif payload_id == 4:
-            payload.payload_release(kit, 3)
+        payload.payload_release(kit, payload_id - 1)
     except Exception as e:
-        print("Could not release payload.")
-        return jsonify({'error': "Invalid operation."}), 400
-    
+        print("Could not release payload:", e)
+        return jsonify({'error': "Failed to release payload."}), 400
+
     return jsonify({'message': 'Payload release successful'}), 200
 
 
@@ -264,10 +254,7 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
             print(f"Received data item does not match expected length...")
 
 if __name__ == "__main__":
-    kit = ServoKit(channels=16)
-
-    print("Servos configured.")
- 
+    kit = ServoKit(channels=16) 
     # TODO: Need to take a parameter off of the command line to determine if we are a plane or copter
 
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
