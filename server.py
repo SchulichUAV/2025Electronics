@@ -18,6 +18,7 @@ import RPi.GPIO as GPIO
 
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
+import modules.AutopilotDevelopment.General.Operations.mission as mission
 import modules.payload as payload
 
 GCS_URL = "http://192.168.1.64:80"
@@ -70,6 +71,25 @@ def set_flight_mode():
         return jsonify({'error': "Invalid operation."}), 400
 
     return jsonify({'message': 'Mode set successfully'}), 200
+
+@app.route('/payload_drop_mission', methods=["POST"])
+def payload_drop_mission():
+    try:
+        json_data = request.json
+        target_lat = json_data['latitude']
+        target_lon = json_data['longitude']
+        drop_altitude = 18 # 18m = 59ft - lowest allowed altitude is 50ft but want to be low for drops
+
+        payload_object_coord = [target_lat, target_lon, drop_altitude]
+
+        mission.upload_payload_drop_mission(vehicle_connection, payload_object_coord)
+
+        # TODO: Need to determine if we want to automatically start the mission by switching into AUTO mode
+        # TODO: Deferring payload drops since we probably want to test this mission pathing first
+    except Exception as e:
+        print("Error uploading mission.")
+        return jsonify({'error': "Invalid operation."}), 400
+
 
 @app.route('/payload_release', methods=["POST"])
 def payload_release():
