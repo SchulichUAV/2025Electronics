@@ -59,7 +59,10 @@ vehicle_data = {
     "alt_uncertainty": 0,
     "speed_uncertainty": 0,
     "heading_uncertainty": 0,
-    "flight_mode": 0
+    "flight_mode": 0,
+    "wind_direction": 0,
+    "wind_speed": 0,
+    "wind_vertical_speed": 0
 }
 
 @app.route('/set_flight_mode', methods=["POST"])
@@ -133,7 +136,6 @@ def payload_release():
         return jsonify({'error': "Failed to release payload."}), 400
 
     return jsonify({'message': 'Payload release successful'}), 200
-
 
 camera_thread = None
 stop_camera_thread = threading.Event()
