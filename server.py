@@ -33,6 +33,7 @@ is_camera_on = False
 image_number = 0
 
 kit = None
+current_available_servo = None
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -92,7 +93,12 @@ def payload_drop_mission():
         mission.upload_payload_drop_mission(vehicle_connection, payload_object_coord)
 
         # TODO: Need to determine if we want to automatically start the mission by switching into AUTO mode
-        # TODO: Deferring payload drops since we probably want to test this mission pathing first
+        mission.check_distance_and_drop(vehicle_connection, 20, current_available_servo) # Drop when 20m away from target
+        current_available_servo += 1
+        if current_available_servo > 3:
+            print("Error, all payloads have been released.")
+            return jsonify({'error': "All payloads have been released."}), 400
+    
     except Exception as e:
         print("Error uploading mission.")
         return jsonify({'error': "Invalid operation."}), 400
@@ -256,7 +262,8 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
             print(f"Received data item does not match expected length...")
 
 if __name__ == "__main__":
-    kit = ServoKit(channels=16) 
+    kit = ServoKit(channels=16)
+    current_available_servo = 0
     # TODO: Need to take a parameter off of the command line to determine if we are a plane or copter
 
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
