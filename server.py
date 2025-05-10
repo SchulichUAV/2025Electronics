@@ -20,6 +20,7 @@ import RPi.GPIO as GPIO
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
 import modules.AutopilotDevelopment.General.Operations.mission as mission
+import modules.AutopilotDevelopment.Plane.Operations.altitude as autopilot_altitude
 import modules.payload as payload
 
 
@@ -60,10 +61,10 @@ vehicle_data = {
     "alt_uncertainty": 0,
     "speed_uncertainty": 0,
     "heading_uncertainty": 0,
-    "flight_mode": 0,
     "wind_direction": 0,
     "wind_speed": 0,
-    "wind_vertical_speed": 0
+    "wind_vertical_speed": 0,
+    "flight_mode": 0
 }
 
 @app.route('/set_flight_mode', methods=["POST"])
@@ -74,7 +75,26 @@ def set_flight_mode():
         mode_id = int(json_data['mode_id'])
         # TODO: Need to determine if we are plane or copter mode when starting the server
         selected_flight_mode = list(autopilot_mode.plane_modes.keys())[mode_id] # list of keys in dictionary, access the key with mode id as index
+        print(f'We are in: {selected_flight_mode}')
+
+        # Retrieve mode_id mapping and print the mode name (mode mappings stored in AutopilotDevelopment/General/Operations/mode.py)
         print(autopilot_mode.set_mode(vehicle_connection, mode_id)) # TODO: Need to use set_mode from plane.py or copter.py depending on current vehicle
+    except Exception as e:
+        return jsonify({'error': "Invalid operation."}), 400
+
+    return jsonify({'message': 'Mode set successfully'}), 200
+
+@app.route('/set_altitude_goto', methods=["POST"])
+def set_altitude_goto():
+    try:
+        json_data = request.json
+        altitude = int(json_data['altitude'])
+        if altitude >= 0:
+            autopilot_altitude.set_current_altitude(vehicle_connection, altitude)
+            print(f'Setting altitude to: {altitude}')
+        else:
+            print("Error: setting altitude to less than 0")
+            
     except Exception as e:
         return jsonify({'error': "Invalid operation."}), 400
 
