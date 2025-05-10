@@ -14,12 +14,12 @@ if [ ! -f "$MAVPROXY_MODULE" ]; then
     exit 1
 fi
 
-PYTHON_ENV_DIR="$HOME/SUAV/env"
+PYTHON_ENV_DIR="$HOME/SUAV/venv"
 
 PYTHON_LIB_DIR=$(find "$PYTHON_ENV_DIR/lib/" -maxdepth 1 -type d -name "python3.*" | head -n 1)
 
 if [ -z "$PYTHON_LIB_DIR" ]; then
-    echo "Error: No python3.X directory found in $HOME/SUAV/env/lib/"
+    echo "Error: No python3.X directory found in $HOME/SUAV/venv/lib/"
     exit 1
 fi
 
