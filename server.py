@@ -5,6 +5,7 @@ from picamera2 import Picamera2, Preview
 from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 from math import ceil
+from adafruit_servokit import ServoKit
 import requests
 import threading
 import socket
@@ -18,8 +19,10 @@ import RPi.GPIO as GPIO
 
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
+import modules.AutopilotDevelopment.General.Operations.mission as mission
 import modules.AutopilotDevelopment.Plane.Operations.altitude as autopilot_altitude
 import modules.payload as payload
+
 
 GCS_URL = "http://192.168.1.64:80"
 VEHICLE_PORT = "udp:127.0.0.1:5006"
@@ -29,6 +32,9 @@ picam2 = None
 vehicle_connection = None
 is_camera_on = False
 image_number = 0
+
+kit = None
+current_available_servo = None
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -94,20 +100,67 @@ def set_altitude_goto():
 
     return jsonify({'message': 'Mode set successfully'}), 200
 
-@app.route('/payload_release', methods=["POST"])
-def payload_release():
+@app.route('/payload_drop_mission', methods=["POST"])
+def payload_drop_mission():
     try:
         json_data = request.json
-        payload_id = json_data['bay']
+        target_lat = json_data['latitude']
+        target_lon = json_data['longitude']
+        drop_altitude = 18 # 18m = 59ft - lowest allowed altitude is 50ft but want to be low for drops
+
+        payload_object_coord = [target_lat, target_lon, drop_altitude]
+
+        mission.upload_payload_drop_mission(vehicle_connection, payload_object_coord)
+
+        # TODO: Need to determine if we want to automatically start the mission by switching into AUTO mode
+        mission.check_distance_and_drop(vehicle_connection, 20, current_available_servo) # Drop when 20m away from target
+        current_available_servo += 1
+        if current_available_servo > 3:
+            print("Error, all payloads have been released.")
+            return jsonify({'error': "All payloads have been released."}), 400
+    
     except Exception as e:
-        print("Could not interpret value from API request.")
+        print("Error uploading mission.")
+        return jsonify({'error': "Invalid operation."}), 400
+
+
+@app.route('/payload_manual_control', methods=["POST"])
+def payload_manual_control():
+    json_data = request.get_json()
+    payload_id = json_data.get('payload_id')
+    payload_open = json_data.get('payload_open')
+
+    if not isinstance(payload_id, int) or not isinstance(payload_open, bool):
+        print("Invalid or missing parameters in API request.")
+        return jsonify({'error': 'Invalid payload_id or payload_open.'}), 400
+
+    if 1 <= payload_id <= 4:
+        try:
+            payload.set_servo_state(payload_id - 1, payload_open)
+        except Exception as e:
+            print("Could not set servo state:", e)
+            return jsonify({'error': "Failed to set servo state."}), 400
+    else:
+        return jsonify({'error': 'Invalid payload_id (must be 1-4).'}), 400
+
+    return jsonify({'servo_status': payload_open, 'message': 'Payload trigger successful'}), 200
+
+
+@app.route('/payload_release', methods=["POST"])
+def payload_release():
+    json_data = request.get_json()
+    payload_id = json_data.get('bay')
+
+    if not isinstance(payload_id, int) or not (1 <= payload_id <= 4):
+        print("Invalid or missing payload_id.")
+        return jsonify({'error': 'Invalid bay (must be an integer from 1 to 4).'}), 400
 
     try:
-        payload.payload_release(payload_id)
+        payload.payload_release(kit, payload_id - 1)
     except Exception as e:
-        print("Could not release payload.")
-        return jsonify({'error': "Invalid operation."}), 400
-    
+        print("Could not release payload:", e)
+        return jsonify({'error': "Failed to release payload."}), 400
+
     return jsonify({'message': 'Payload release successful'}), 200
 
 camera_thread = None
@@ -229,9 +282,8 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
             print(f"Received data item does not match expected length...")
 
 if __name__ == "__main__":
-    payload.configure_servos()
-    print("Servos configured.")
-
+    kit = ServoKit(channels=16)
+    current_available_servo = 0
     # TODO: Need to take a parameter off of the command line to determine if we are a plane or copter
 
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
