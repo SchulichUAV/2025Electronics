@@ -2,17 +2,33 @@
 set -x
 set -v 
 
-if [ "$#" -ne 1 ]; then
+if [ "$#" -ne 1 ]; then # Must pass the location of the MavProxy module.
     echo "Usage: $0 <source_file>"
     exit 1
 fi
 
 MAVPROXY_MODULE="$1"
-MAVPROXY_MODULES_DEST="$HOME/SUAV/env/lib/python3.12/site-packages/MAVProxy/modules"
 
 if [ ! -f "$MAVPROXY_MODULE" ]; then
     echo "Error: Location for MAVPROXY_MODULE does not exist."
     exit 1
+fi
+
+PYTHON_ENV_DIR="$HOME/SUAV/env"
+
+PYTHON_LIB_DIR=$(find "$PYTHON_ENV_DIR/lib/" -maxdepth 1 -type d -name "python3.*" | head -n 1)
+
+if [ -z "$PYTHON_LIB_DIR" ]; then
+    echo "Error: No python3.X directory found in $HOME/SUAV/env/lib/"
+    exit 1
+fi
+
+MAVPROXY_MODULES_DEST="$PYTHON_LIB_DIR/site-packages/MAVProxy/modules"
+
+if [ ! -d "$MAVPROXY_MODULES_DEST" ]; then
+    echo "Error: Location for MavProxy does not exist in site-packages, pip installing MavProxy."
+    source $PYTHON_ENV_DIR/bin/activate
+    pip3 install MAVProxy
 fi
 
 
