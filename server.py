@@ -18,7 +18,7 @@ import RPi.GPIO as GPIO
 
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
-import modules.AutopilotDevelopment.Plane.Operations.altitude as altitude_module
+import modules.AutopilotDevelopment.Plane.Operations.altitude as autopilot_altitude
 import modules.payload as payload
 
 GCS_URL = "http://192.168.1.64:80"
@@ -66,7 +66,6 @@ def set_flight_mode():
 # Ardupilot docs (for flight modes): https://ardupilot.org/copter/docs/parameters.html
     try:
         json_data = request.json
-        # vehicle_mode = int(json_data['vehicle_mode'])
         mode_id = int(json_data['mode_id'])
         # TODO: Need to determine if we are plane or copter mode when starting the server
         selected_flight_mode = list(autopilot_mode.plane_modes.keys())[mode_id] # list of keys in dictionary, access the key with mode id as index
@@ -84,8 +83,12 @@ def set_altitude_goto():
     try:
         json_data = request.json
         altitude = int(json_data['altitude'])
-        altitude_module.set_current_altitude(vehicle_connection, altitude)
-        print(f'Setting altitude to: {altitude}')
+        if altitude >= 0:
+            autopilot_altitude.set_current_altitude(vehicle_connection, altitude)
+            print(f'Setting altitude to: {altitude}')
+        else:
+            print("Error: setting altitude to less than 0")
+            
     except Exception as e:
         return jsonify({'error': "Invalid operation."}), 400
 
