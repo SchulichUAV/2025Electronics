@@ -61,10 +61,10 @@ vehicle_data = {
     "alt_uncertainty": 0,
     "speed_uncertainty": 0,
     "heading_uncertainty": 0,
-    "wind_direction": 0,
-    "wind_speed": 0,
-    "wind_vertical_speed": 0,
-    "flight_mode": 0
+    "flight_mode": 0,
+    "battery_voltage": 0,
+    "battery_current": 0,
+    "battery_remaining": 0
 }
 
 @app.route('/set_flight_mode', methods=["POST"])
