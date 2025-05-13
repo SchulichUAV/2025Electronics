@@ -5,6 +5,7 @@ from picamera2 import Picamera2, Preview
 from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 from math import ceil
+from adafruit_servokit import ServoKit
 import requests
 import threading
 import socket
@@ -21,7 +22,10 @@ from modules.AutopilotDevelopment.Copter.copterObject import Copter
 
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
-import modules.AutopilotDevelopment.Plane.Operations.system_state as system_state
+import modules.AutopilotDevelopment.General.Operations.mission as mission
+import modules.AutopilotDevelopment.Plane.Operations.altitude as autopilot_altitude
+import modules.payload as payload
+
 
 GCS_URL = "http://192.168.1.64:80"
 VEHICLE_PORT = "udp:127.0.0.1:5006"
@@ -29,10 +33,12 @@ DELAY = 0.25
 
 picam2 = None
 vehicle_connection = None
-image_number = 0
 is_camera_on = False
 image_number = 0
 vehicle = None
+
+kit = None
+current_available_servo = None
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -50,11 +56,19 @@ vehicle_data = {
     "dlon": 0,
     "dalt": 0,
     "heading": 0,
+    "airspeed": 0,
+    "groundspeed": 0,
+    "throttle": 0,
+    "climb": 0,
     "num_satellites": 0,
     "position_uncertainty": 0,
     "alt_uncertainty": 0,
     "speed_uncertainty": 0,
-    "heading_uncertainty": 0
+    "heading_uncertainty": 0,
+    "flight_mode": 0,
+    "battery_voltage": 0,
+    "battery_current": 0,
+    "battery_remaining": 0
 }
 
 @app.route('/set_flight_mode', methods=["POST"])
@@ -64,46 +78,155 @@ def set_flight_mode():
         json_data = request.json
         mode_id = int(json_data['mode_id'])
         # TODO: Need to determine if we are plane or copter mode when starting the server
-        # TODO: Retrieve mode_id mapping and print the mode name (mode mappings stored in AutopilotDevelopment/General/Operations/mode.py)
-        print(mode_id)
+        selected_flight_mode = list(autopilot_mode.plane_modes.keys())[mode_id] # list of keys in dictionary, access the key with mode id as index
+        print(f'We are in: {selected_flight_mode}')
+
+        # Retrieve mode_id mapping and print the mode name (mode mappings stored in AutopilotDevelopment/General/Operations/mode.py)
         print(autopilot_mode.set_mode(vehicle_connection, mode_id)) # TODO: Need to use set_mode from plane.py or copter.py depending on current vehicle
     except Exception as e:
         return jsonify({'error': "Invalid operation."}), 400
 
     return jsonify({'message': 'Mode set successfully'}), 200
 
+@app.route('/set_altitude_goto', methods=["POST"])
+def set_altitude_goto():
+    try:
+        json_data = request.json
+        altitude = int(json_data['altitude'])
+        if altitude >= 0:
+            autopilot_altitude.set_current_altitude(vehicle_connection, altitude)
+            print(f'Setting altitude to: {altitude}')
+        else:
+            print("Error: setting altitude to less than 0")
+            
+    except Exception as e:
+        return jsonify({'error': "Invalid operation."}), 400
+
+    return jsonify({'message': 'Mode set successfully'}), 200
+
+@app.route('/payload_drop_mission', methods=["POST"])
+def payload_drop_mission():
+    try:
+        json_data = request.json
+        target_lat = json_data['latitude']
+        target_lon = json_data['longitude']
+        drop_altitude = 18 # 18m = 59ft - lowest allowed altitude is 50ft but want to be low for drops
+
+        payload_object_coord = [target_lat, target_lon, drop_altitude]
+
+        mission.upload_payload_drop_mission(vehicle_connection, payload_object_coord)
+
+        # TODO: Need to determine if we want to automatically start the mission by switching into AUTO mode
+        mission.check_distance_and_drop(vehicle_connection, 20, current_available_servo) # Drop when 20m away from target
+        current_available_servo += 1
+        if current_available_servo > 3:
+            print("Error, all payloads have been released.")
+            return jsonify({'error': "All payloads have been released."}), 400
+    
+    except Exception as e:
+        print("Error uploading mission.")
+        return jsonify({'error': "Invalid operation."}), 400
+
+
+@app.route('/payload_manual_control', methods=["POST"])
+def payload_manual_control():
+    json_data = request.get_json()
+    payload_id = json_data.get('payload_id')
+    payload_open = json_data.get('payload_open')
+
+    if not isinstance(payload_id, int) or not isinstance(payload_open, bool):
+        print("Invalid or missing parameters in API request.")
+        return jsonify({'error': 'Invalid payload_id or payload_open.'}), 400
+
+    if 1 <= payload_id <= 4:
+        try:
+            payload.set_servo_state(payload_id - 1, payload_open)
+        except Exception as e:
+            print("Could not set servo state:", e)
+            return jsonify({'error': "Failed to set servo state."}), 400
+    else:
+        return jsonify({'error': 'Invalid payload_id (must be 1-4).'}), 400
+
+    return jsonify({'servo_status': payload_open, 'message': 'Payload trigger successful'}), 200
+
+
+@app.route('/payload_release', methods=["POST"])
+def payload_release():
+    json_data = request.get_json()
+    payload_id = json_data.get('bay')
+
+    if not isinstance(payload_id, int) or not (1 <= payload_id <= 4):
+        print("Invalid or missing payload_id.")
+        return jsonify({'error': 'Invalid bay (must be an integer from 1 to 4).'}), 400
+
+    try:
+        payload.payload_release(kit, payload_id - 1)
+    except Exception as e:
+        print("Could not release payload:", e)
+        return jsonify({'error': "Failed to release payload."}), 400
+
+    return jsonify({'message': 'Payload release successful'}), 200
+
+camera_thread = None
+stop_camera_thread = threading.Event()
+
 @app.route("/toggle_camera", methods=["POST"])
 def toggle_camera():
-    global picam2
     global image_number
     global is_camera_on
+    global camera_thread
+    global stop_camera_thread
 
     try:
         json_data = request.json
         is_camera_on = json_data["is_camera_on"]
+        image_number = json_data["image_count"]
         print("SUCCESS")
+   
     except Exception as e:
         print("Could not interpret `is_camera_on` value from API request.")
         print(e)
+
+    if is_camera_on:
+        if camera_thread is None or not camera_thread.is_alive():
+            stop_camera_thread.clear()
+            camera_thread = threading.Thread(target=continuously_capture_images)
+            camera_thread.start()
+            print("Starting camera")
+    else:
+        print("Stopping Camera")
+        stop_camera_thread.set()
+
+    return { "message": "Success!"}, 200
+
+def continuously_capture_images():
+    global is_camera_on
+    global picam2
+    global image_number
+
     if picam2 is None:
-        print("picam2 is None")
+        print("Initializing camera...")
         picam2 = Picamera2()
         camera_config = picam2.create_still_configuration()
         picam2.configure(camera_config)
         picam2.start_preview(Preview.NULL)
-        picam2.start()
         time.sleep(1)
     else:
         print("picam2 is not none! starting picam.")
-        picam2.start()
-    while is_camera_on:
-        image_number += 1
-        delay_time_remaining = DELAY - take_picture(image_number, picam2)
-        if delay_time_remaining > 0:
-            time.sleep(delay_time_remaining)
-    print("stopping picam")
-    picam2.stop()
-    return { "message": "Success!"}, 200
+    
+    picam2.start()
+
+    try:
+        while is_camera_on and not stop_camera_thread.is_set():
+            image_number += 1
+            delay_time_remaining = DELAY - take_picture(image_number, picam2)
+            if delay_time_remaining > 0:
+                time.sleep(delay_time_remaining)
+    except Exception as e:
+        print("Error in camera thread:", e)
+    finally:
+        print("Stopping camera thread...")
+        picam2.stop()
 
 def take_picture(image_number, picam2):
     print(f"Beginning capturing capture{image_number}.jpg")
@@ -154,24 +277,13 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
         if message_time <= vehicle_data["last_time"]:
             continue
 
-        vehicle_data["last_time"] = message_time
-        vehicle_data["lon"] = float(items[1])
-        vehicle_data["lat"] = float(items[2])
-        vehicle_data["rel_alt"] = float(items[3])
-        vehicle_data["alt"] = float(items[4])
-        vehicle_data["roll"] = float(items[5])
-        vehicle_data["pitch"] = float(items[6])
-        vehicle_data["yaw"] = float(items[7])
-        vehicle_data["dlat"] = float(items[8])
-        vehicle_data["dlon"] = float(items[9])
-        vehicle_data["dalt"] = float(items[10])
-        vehicle_data["heading"] = float(items[11])
-        vehicle_data["num_satellites"] = float(items[12])
-        vehicle_data["position_uncertainty"] = float(items[13])
-        vehicle_data["alt_uncertainty"] = float(items[14])
-        vehicle_data["speed_uncertainty"] = float(items[15])
-        vehicle_data["heading_uncertainty"] = float(items[16])
+        if len(items) == len(vehicle_data):
+            vehicle_data["last_time"] = message_time
 
+            for i, key in enumerate(list(vehicle_data.keys())[1:], start=1):
+                vehicle_data[key] = float(items[i])
+        else:
+            print(f"Received data item does not match expected length...")
 
 if __name__ == "__main__":
     # Need to take a parameter off of the command line to determine if we are a plane or copter
@@ -183,6 +295,9 @@ if __name__ == "__main__":
         print(f"Unknown vehicle type: {sys.argv[1]}")
         sys.exit(1)
     
+    kit = ServoKit(channels=16)
+    current_available_servo = 0
+
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
     position_thread.start()
     time.sleep(1)
