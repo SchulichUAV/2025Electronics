@@ -17,6 +17,9 @@ from os import path
 import argparse
 import RPi.GPIO as GPIO
 
+from modules.AutopilotDevelopment.Plane.planeObject import Plane
+from modules.AutopilotDevelopment.Copter.copterObject import Copter
+
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
 import modules.AutopilotDevelopment.General.Operations.mission as mission
@@ -32,6 +35,7 @@ picam2 = None
 vehicle_connection = None
 is_camera_on = False
 image_number = 0
+vehicle = None
 
 kit = None
 current_available_servo = None
@@ -282,9 +286,17 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
             print(f"Received data item does not match expected length...")
 
 if __name__ == "__main__":
+    # Need to take a parameter off of the command line to determine if we are a plane or copter
+    if(sys.argv[1].lower() == "plane"):
+        vehicle = Plane()
+    elif(sys.argv[1].lower() == "copter"):
+        vehicle = Copter() 
+    else:
+        print(f"Unknown vehicle type: {sys.argv[1]}")
+        sys.exit(1)
+    
     kit = ServoKit(channels=16)
     current_available_servo = 0
-    # TODO: Need to take a parameter off of the command line to determine if we are a plane or copter
 
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
     position_thread.start()
