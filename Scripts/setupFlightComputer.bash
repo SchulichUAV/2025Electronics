@@ -11,7 +11,8 @@ if [ ! -d "$SUAV_DIR" ]; then
     echo "Creating directory: $SUAV_DIR"
     mkdir -p $SUAV_DIR
 else
-    echo "Directory $SUAV_DIR already exists."
+    echo "Directory $SUAV_DIR already exists. Nuking it..."
+    rm -rf $SUAV_DIR
 fi
 
 # Navigate to SUAV
