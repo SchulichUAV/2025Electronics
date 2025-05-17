@@ -292,8 +292,8 @@ if __name__ == "__main__":
     elif(sys.argv[1].lower() == "copter"):
         vehicle = Copter() 
     else:
-        print(f"Unknown vehicle type: {sys.argv[1]}")
-        sys.exit(1)
+        vehicle = Plane()
+        print("Defaulting into plane.")
     
     kit = ServoKit(channels=16)
     current_available_servo = 0
