@@ -7,13 +7,14 @@ REPO_URL="https://github.com/SchulichUAV/2025Electronics.git"
 VENV_NAME="venv"
 
 # Create SUAV directory 
-if [ ! -d "$SUAV_DIR" ]; then
-    echo "Creating directory: $SUAV_DIR"
-    mkdir -p $SUAV_DIR
-else
+if [ -d "$SUAV_DIR" ]; then
     echo "Directory $SUAV_DIR already exists. Nuking it..."
     rm -rf $SUAV_DIR
+    echo "Creating directory: $SUAV_DIR"
+    mkdir -p $SUAV_DIR
 fi
+echo "Creating directory: $SUAV_DIR"
+mkdir -p $SUAV_DIR
 
 # Navigate to SUAV
 cd $SUAV_DIR || { echo "Failed to access SUAV"; exit 1; }
