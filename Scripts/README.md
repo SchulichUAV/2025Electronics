@@ -33,6 +33,7 @@
 - `cdElec` -> Changes to `~/SUAV/2025Electronics` directory
 - `runServer` -> Runs `server.py`
 - `runMavMod` -> Runs `mavproxy.py`
+- `sourceVenv` -> Sources `~/SUAV/venv/bin/activate`
 
 ---
 ### setupMavProxyModule.bash
