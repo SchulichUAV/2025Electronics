@@ -13,6 +13,10 @@ echo "alias cdElec='cd ~/SUAV/2025Electronics'" >> "$HOME/.bashrc"
 # Add alias to run server.py
 echo "alias runServer='python3 ~/SUAV/2025Electronics/server.py'" >> "$HOME/.bashrc"
 
+# Add alias to source venv
+echo "alias sourceVenv='source ~/SUAV/venv/bin/activate'" >> "$HOME/.bashrc"
+
+
 # Add bash function to run the mavproxy.py
 echo "function runMavMod() {
     mavproxy_path=\"SUAV/venv/lib/python3.11/site-packages/MAVProxy/mavproxy.py\"
