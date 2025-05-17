@@ -26,3 +26,7 @@ echo "function runMavMod() {
     fi
     python3 mavproxy.py --out=udp:127.0.0.1:5005\"
 }" >> "$HOME/.bashrc"
+
+echo "Applying new aliases and functions..."
+source "$HOME/.bashrc"
+
