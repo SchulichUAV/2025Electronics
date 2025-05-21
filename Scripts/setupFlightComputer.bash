@@ -8,10 +8,18 @@ VENV_NAME="venv"
 
 # Create SUAV directory 
 if [ -d "$SUAV_DIR" ]; then
-    echo "Directory $SUAV_DIR already exists. Nuking it..."
-    rm -rf $SUAV_DIR
-    echo "Creating directory: $SUAV_DIR"
-    mkdir -p $SUAV_DIR
+
+    read -p "Directory $SUAV_DIR already exists. Do you want to remove it and continue? (y/n): " answer
+    
+    if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
+        echo "Directory $SUAV_DIR already exists. Nuking it..."
+        rm -rf $SUAV_DIR
+        echo "Creating directory: $SUAV_DIR"
+        mkdir -p $SUAV_DIR    
+    else
+        echo "Exiting."
+        exit
+    fi
 fi
 echo "Creating directory: $SUAV_DIR"
 mkdir -p $SUAV_DIR
