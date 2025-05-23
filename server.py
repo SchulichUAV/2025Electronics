@@ -111,7 +111,7 @@ def payload_drop_mission():
         mission.upload_payload_drop_mission(vehicle_connection, payload_object_coord)
 
         # TODO: Need to determine if we want to automatically start the mission by switching into AUTO mode
-        mission.check_distance_and_drop(vehicle_connection, 20, current_available_servo) # Drop when 20m away from target
+        mission.check_distance_and_drop(vehicle_connection, current_available_servo)
         current_available_servo += 1
         if current_available_servo > 3:
             print("Error, all payloads have been released.")
