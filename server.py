@@ -56,15 +56,9 @@ vehicle_data = {
     "dlon": 0,
     "dalt": 0,
     "heading": 0,
-    "airspeed": 0,
     "groundspeed": 0,
     "throttle": 0,
     "climb": 0,
-    "num_satellites": 0,
-    "position_uncertainty": 0,
-    "alt_uncertainty": 0,
-    "speed_uncertainty": 0,
-    "heading_uncertainty": 0,
     "flight_mode": 0,
     "battery_voltage": 0,
     "battery_current": 0,
@@ -233,11 +227,11 @@ def take_picture(image_number, picam2):
     start_time = time.time()
 
     image_stream = BytesIO()
+    vehicle_data_json = json.dumps(vehicle_data)
     image = picam2.capture_image('main')
     image.save(image_stream, format='JPEG')
     image_stream.seek(0)
 
-    vehicle_data_json = json.dumps(vehicle_data)
     headers = {} 
 
     file_name = f'{image_number:05d}'
