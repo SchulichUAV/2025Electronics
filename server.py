@@ -59,10 +59,13 @@ vehicle_data = {
     "groundspeed": 0,
     "throttle": 0,
     "climb": 0,
+    "num_satellites": 0,
+    "position_uncertainty": 0,
+    "alt_uncertainty": 0,
     "flight_mode": 0,
     "battery_voltage": 0,
     "battery_current": 0,
-    "battery_remaining": 0
+    "battery_remaining": 0,
 }
 
 @app.route('/set_flight_mode', methods=["POST"])
