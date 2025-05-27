@@ -157,7 +157,7 @@ def payload_release():
         return jsonify({'error': 'Invalid bay (must be an integer from 1 to 4).'}), 400
 
     try:
-        payload.payload_release(kit, payload_id - 1)
+        payload.payload_release(kit, payload_id - 1, vehicle_data)
     except Exception as e:
         print("Could not release payload:", e)
         return jsonify({'error': "Failed to release payload."}), 400
