@@ -181,6 +181,16 @@ def payload_close_all():
 
     return jsonify({'message': 'All servos closed successfully'}), 200
 
+@app.route('/payload_open_all', methods=["POST"])
+def payload_open_all():
+    try:
+        payload.open_all_servos(kit)
+    except Exception as e:
+        print("Could not open all servos:", e)
+        return jsonify({'error': "Failed to open all servos."}), 400
+
+    return jsonify({'message': 'All servos opened successfully'}), 200
+
 @app.route('/payload_open', methods=["POST"])
 def payload_open():
     json_data = request.get_json()
