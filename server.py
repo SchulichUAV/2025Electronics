@@ -161,9 +161,6 @@ def payload_release():
 
     return jsonify({'message': 'Payload release successful'}), 200
 
-camera_thread = None
-stop_camera_thread = threading.Event()
-
 @app.route('/payload_release_all', methods=["POST"])
 def payload_release_all():
     try:
@@ -174,6 +171,52 @@ def payload_release_all():
 
     return jsonify({'message': 'All payloads released successfully'}), 200
 
+@app.route('payload_close_all', methods=["POST"])
+def payload_close_all():
+    try:
+        payload.close_all_servos(kit)
+    except Exception as e:
+        print("Could not close all servos:", e)
+        return jsonify({'error': "Failed to close all servos."}), 400
+
+    return jsonify({'message': 'All servos closed successfully'}), 200
+
+@app.route('/payload_open', methods=["POST"])
+def payload_open():
+    json_data = request.get_json()
+    payload_id = json_data.get('bay')
+
+    if not isinstance(payload_id, int) or not (1 <= payload_id <= 4):
+        print("Invalid or missing payload_id.")
+        return jsonify({'error': 'Invalid bay (must be an integer from 1 to 4).'}), 400
+
+    try:
+        payload.open_servo(kit, payload_id - 1)
+    except Exception as e:
+        print("Could not open servo:", e)
+        return jsonify({'error': "Failed to open servo."}), 400
+
+    return jsonify({'message': 'Servo opened successfully'}), 200
+
+@app.route('/payload_close', methods=["POST"])
+def payload_close():
+    json_data = request.get_json()
+    payload_id = json_data.get('bay')
+
+    if not isinstance(payload_id, int) or not (1 <= payload_id <= 4):
+        print("Invalid or missing payload_id.")
+        return jsonify({'error': 'Invalid bay (must be an integer from 1 to 4).'}), 400
+
+    try:
+        payload.close_servo(kit, payload_id - 1)
+    except Exception as e:
+        print("Could not close servo:", e)
+        return jsonify({'error': "Failed to close servo."}), 400
+
+    return jsonify({'message': 'Servo closed successfully'}), 200
+
+camera_thread = None
+stop_camera_thread = threading.Event()
 
 @app.route("/toggle_camera", methods=["POST"])
 def toggle_camera():
