@@ -44,7 +44,7 @@ def release_all(kit, vehicle_data):
     :param kit: The ServoKit instance controlling the servos.
     :param vehicle_data: Dictionary containing vehicle data (e.g., lat, lon, alt).
     """
-    print("Releasing all servos...")
+    print(f"Releasing all servos at {vehicle_data['lat']}, {vehicle_data['lon']}, {vehicle_data['alt']}")
     open_all_servos(kit)
     sleep(4)
     print("Closing all servos...")
