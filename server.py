@@ -17,9 +17,6 @@ from os import path
 import argparse
 import RPi.GPIO as GPIO
 
-from modules.AutopilotDevelopment.Plane.planeObject import Plane
-from modules.AutopilotDevelopment.Copter.copterObject import Copter
-
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
 import modules.AutopilotDevelopment.General.Operations.mission as mission
@@ -114,7 +111,7 @@ def payload_drop_mission():
         mission.upload_payload_drop_mission(vehicle_connection, payload_object_coord)
 
         # TODO: Need to determine if we want to automatically start the mission by switching into AUTO mode
-        mission.check_distance_and_drop(vehicle_connection, 20, current_available_servo) # Drop when 20m away from target
+        mission.check_distance_and_drop(vehicle_connection, current_available_servo)
         current_available_servo += 1
         if current_available_servo > 3:
             print("Error, all payloads have been released.")
@@ -283,15 +280,7 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
             print(f"Received data item does not match expected length...")
 
 if __name__ == "__main__":
-    # Need to take a parameter off of the command line to determine if we are a plane or copter
-    if(sys.argv[1].lower() == "plane"):
-        vehicle = Plane()
-    elif(sys.argv[1].lower() == "copter"):
-        vehicle = Copter() 
-    else:
-        vehicle = Plane()
-        print("Defaulting into plane.")
-    
+    # Need to take a parameter off of the command line to determine if we are a plane or copter 
     kit = ServoKit(channels=16)
     current_available_servo = 0
 
