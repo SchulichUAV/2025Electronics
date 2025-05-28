@@ -17,9 +17,6 @@ from os import path
 import argparse
 import RPi.GPIO as GPIO
 
-from modules.AutopilotDevelopment.Plane.planeObject import Plane
-from modules.AutopilotDevelopment.Copter.copterObject import Copter
-
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
 import modules.AutopilotDevelopment.General.Operations.mode as autopilot_mode
 import modules.AutopilotDevelopment.General.Operations.mission as mission
@@ -59,10 +56,13 @@ vehicle_data = {
     "groundspeed": 0,
     "throttle": 0,
     "climb": 0,
+    "num_satellites": 0,
+    "position_uncertainty": 0,
+    "alt_uncertainty": 0,
     "flight_mode": 0,
     "battery_voltage": 0,
     "battery_current": 0,
-    "battery_remaining": 0
+    "battery_remaining": 0,
 }
 
 @app.route('/set_flight_mode', methods=["POST"])
@@ -154,7 +154,7 @@ def payload_release():
         return jsonify({'error': 'Invalid bay (must be an integer from 1 to 4).'}), 400
 
     try:
-        payload.payload_release(kit, payload_id - 1)
+        payload.payload_release(kit, payload_id - 1, vehicle_data)
     except Exception as e:
         print("Could not release payload:", e)
         return jsonify({'error': "Failed to release payload."}), 400
@@ -280,15 +280,7 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
             print(f"Received data item does not match expected length...")
 
 if __name__ == "__main__":
-    # Need to take a parameter off of the command line to determine if we are a plane or copter
-    if(sys.argv[1].lower() == "plane"):
-        vehicle = Plane()
-    elif(sys.argv[1].lower() == "copter"):
-        vehicle = Copter() 
-    else:
-        vehicle = Plane()
-        print("Defaulting into plane.")
-    
+    # Need to take a parameter off of the command line to determine if we are a plane or copter 
     kit = ServoKit(channels=16)
     current_available_servo = 0
 
