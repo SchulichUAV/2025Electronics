@@ -164,6 +164,17 @@ def payload_release():
 camera_thread = None
 stop_camera_thread = threading.Event()
 
+@app.route('/payload_release_all', methods=["POST"])
+def payload_release_all():
+    try:
+        payload.release_all(kit, vehicle_data)
+    except Exception as e:
+        print("Could not release all payloads:", e)
+        return jsonify({'error': "Failed to release all payloads."}), 400
+
+    return jsonify({'message': 'All payloads released successfully'}), 200
+
+
 @app.route("/toggle_camera", methods=["POST"])
 def toggle_camera():
     global image_number
