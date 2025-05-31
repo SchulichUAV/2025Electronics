@@ -104,13 +104,12 @@ def payload_drop_mission():
         json_data = request.json
         target_lat = json_data['latitude']
         target_lon = json_data['longitude']
-        drop_altitude = 18 # 18m = 59ft - lowest allowed altitude is 50ft but want to be low for drops
+        drop_altitude = 20 # 18m = 59ft - lowest allowed altitude is 50ft but want to be low for drops
 
         payload_object_coord = [target_lat, target_lon, drop_altitude]
 
         mission.upload_payload_drop_mission(vehicle_connection, payload_object_coord)
 
-        # TODO: Need to determine if we want to automatically start the mission by switching into AUTO mode
         mission.check_distance_and_drop(vehicle_connection, current_available_servo, kit, vehicle_data)
         current_available_servo += 1
         if current_available_servo > 3:
@@ -118,7 +117,7 @@ def payload_drop_mission():
             return jsonify({'error': "All payloads have been released."}), 400
     
     except Exception as e:
-        print("Error uploading mission.")
+        print(f"Error uploading mission. Error: {e}")
         return jsonify({'error': "Invalid operation."}), 400
 
 
@@ -171,7 +170,7 @@ def payload_release_all():
 
     return jsonify({'message': 'All payloads released successfully'}), 200
 
-@app.route('payload_close_all', methods=["POST"])
+@app.route('/payload_close_all', methods=["POST"])
 def payload_close_all():
     try:
         payload.close_all_servos(kit)
