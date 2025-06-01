@@ -35,7 +35,6 @@ image_number = 0
 vehicle = None
 
 kit = None
-current_available_servo = None
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -104,17 +103,15 @@ def payload_drop_mission():
         json_data = request.json
         target_lat = json_data['latitude']
         target_lon = json_data['longitude']
+        bay = json_data['bay']
         drop_altitude = 20 # 18m = 59ft - lowest allowed altitude is 50ft but want to be low for drops
 
         payload_object_coord = [target_lat, target_lon, drop_altitude]
 
         mission.upload_payload_drop_mission(vehicle_connection, payload_object_coord)
-
-        mission.check_distance_and_drop(vehicle_connection, current_available_servo, kit, vehicle_data)
-        current_available_servo += 1
-        if current_available_servo > 3:
-            print("Error, all payloads have been released.")
-            return jsonify({'error': "All payloads have been released."}), 400
+        print("Mission successfully uploaded.")
+        
+        mission.check_distance_and_drop(vehicle_connection, bay - 1, kit, vehicle_data)
     
     except Exception as e:
         print(f"Error uploading mission. Error: {e}")
@@ -345,7 +342,6 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
 if __name__ == "__main__":
     # Need to take a parameter off of the command line to determine if we are a plane or copter 
     kit = ServoKit(channels=16)
-    current_available_servo = 0
 
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
     position_thread.start()
