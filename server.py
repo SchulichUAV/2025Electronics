@@ -15,6 +15,7 @@ import time
 from io import BytesIO
 from os import path
 import argparse
+import threading
 import RPi.GPIO as GPIO
 
 import modules.AutopilotDevelopment.General.Operations.initialize as initialize
@@ -35,7 +36,6 @@ image_number = 0
 vehicle = None
 
 kit = None
-current_available_servo = None
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -104,23 +104,48 @@ def payload_drop_mission():
         json_data = request.json
         target_lat = json_data['latitude']
         target_lon = json_data['longitude']
-        drop_altitude = 18 # 18m = 59ft - lowest allowed altitude is 50ft but want to be low for drops
+        drop_altitude = 20 # 18m = 59ft - lowest allowed altitude is 50ft but want to be low for drops
 
         payload_object_coord = [target_lat, target_lon, drop_altitude]
 
         mission.upload_payload_drop_mission(vehicle_connection, payload_object_coord)
-
-        # TODO: Need to determine if we want to automatically start the mission by switching into AUTO mode
-        mission.check_distance_and_drop(vehicle_connection, current_available_servo)
-        current_available_servo += 1
-        if current_available_servo > 3:
-            print("Error, all payloads have been released.")
-            return jsonify({'error': "All payloads have been released."}), 400
-    
+        print("Mission successfully uploaded.")
+            
     except Exception as e:
-        print("Error uploading mission.")
+        print(f"Error uploading mission. Error: {e}")
         return jsonify({'error': "Invalid operation."}), 400
+    
+@app.route('/monitor_mission_and_drop', methods=["POST"])
+def monitor_mission_and_drop():
+    try:
+        json_data = request.json
+        bay = json_data['bay']
+        print(f"Initiating background monitor and drop for bay {bay}...")
 
+        def monitor_and_drop():
+            try:
+                # Wait for the vehicle to reach the target waypoint
+                while True:
+                    msg = vehicle_connection.recv_match(type='MISSION_CURRENT', blocking=True, timeout=5)
+                    if msg is not None and msg.seq == 2:  # Assuming seq 2 is the payload drop waypoint
+                        autopilot_mode.set_mode(vehicle_connection, 10)  # Set to AUTO mode
+                        break
+
+                # Drop the payload
+                mission.check_distance_and_drop(vehicle_connection, bay - 1, kit, vehicle_data)
+                print(f"Payload drop completed for bay {bay}")
+            except Exception as drop_error:
+                print(f"[Background Thread] Error in mission drop: {drop_error}")
+
+        # Start thread
+        thread = threading.Thread(target=monitor_and_drop)
+        thread.start()
+
+    except Exception as e:
+        print(f"[Flask] Error starting monitor and drop thread: {e}")
+        return jsonify({'error': "Failed to start background drop task."}), 400
+
+    return jsonify({'message': 'Payload drop initiated in background'}), 200
 
 @app.route('/payload_manual_control', methods=["POST"])
 def payload_manual_control():
@@ -160,6 +185,70 @@ def payload_release():
         return jsonify({'error': "Failed to release payload."}), 400
 
     return jsonify({'message': 'Payload release successful'}), 200
+
+@app.route('/payload_release_all', methods=["POST"])
+def payload_release_all():
+    try:
+        payload.release_all(kit, vehicle_data)
+    except Exception as e:
+        print("Could not release all payloads:", e)
+        return jsonify({'error': "Failed to release all payloads."}), 400
+
+    return jsonify({'message': 'All payloads released successfully'}), 200
+
+@app.route('/payload_close_all', methods=["POST"])
+def payload_close_all():
+    try:
+        payload.close_all_servos(kit)
+    except Exception as e:
+        print("Could not close all servos:", e)
+        return jsonify({'error': "Failed to close all servos."}), 400
+
+    return jsonify({'message': 'All servos closed successfully'}), 200
+
+@app.route('/payload_open_all', methods=["POST"])
+def payload_open_all():
+    try:
+        payload.open_all_servos(kit)
+    except Exception as e:
+        print("Could not open all servos:", e)
+        return jsonify({'error': "Failed to open all servos."}), 400
+
+    return jsonify({'message': 'All servos opened successfully'}), 200
+
+@app.route('/payload_open', methods=["POST"])
+def payload_open():
+    json_data = request.get_json()
+    payload_id = json_data.get('bay')
+
+    if not isinstance(payload_id, int) or not (1 <= payload_id <= 4):
+        print("Invalid or missing payload_id.")
+        return jsonify({'error': 'Invalid bay (must be an integer from 1 to 4).'}), 400
+
+    try:
+        payload.open_servo(kit, payload_id - 1)
+    except Exception as e:
+        print("Could not open servo:", e)
+        return jsonify({'error': "Failed to open servo."}), 400
+
+    return jsonify({'message': 'Servo opened successfully'}), 200
+
+@app.route('/payload_close', methods=["POST"])
+def payload_close():
+    json_data = request.get_json()
+    payload_id = json_data.get('bay')
+
+    if not isinstance(payload_id, int) or not (1 <= payload_id <= 4):
+        print("Invalid or missing payload_id.")
+        return jsonify({'error': 'Invalid bay (must be an integer from 1 to 4).'}), 400
+
+    try:
+        payload.close_servo(kit, payload_id - 1)
+    except Exception as e:
+        print("Could not close servo:", e)
+        return jsonify({'error': "Failed to close servo."}), 400
+
+    return jsonify({'message': 'Servo closed successfully'}), 200
 
 camera_thread = None
 stop_camera_thread = threading.Event()
@@ -282,7 +371,6 @@ def receive_vehicle_position():  # Actively runs and receives live vehicle data 
 if __name__ == "__main__":
     # Need to take a parameter off of the command line to determine if we are a plane or copter 
     kit = ServoKit(channels=16)
-    current_available_servo = 0
 
     position_thread = threading.Thread(target=receive_vehicle_position, daemon=True)
     position_thread.start()
