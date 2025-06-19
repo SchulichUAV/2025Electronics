@@ -110,6 +110,7 @@ def payload_drop_mission():
 
         mission.upload_payload_drop_mission(vehicle_connection, payload_object_coord)
         print("Mission successfully uploaded.")
+        return jsonify({'message': 'Mission uploaded successfully.'}), 200
             
     except Exception as e:
         print(f"Error uploading mission. Error: {e}")
